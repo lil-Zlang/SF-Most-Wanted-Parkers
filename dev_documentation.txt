@@ -3,21 +3,22 @@ SF'S MOST WANTED PARKERS - DEVELOPMENT DOCUMENTATION
 ================================================================================
 
 Last Updated: Wednesday, October 15, 2025 - Current Session
-Latest Update: Interactive Neighborhood Heat Map Visualization - COMPLETE
+Latest Update: Google Maps Platform Integration - COMPLETE
 
 Update Summary:
-- ✅ Added interactive neighborhood heat map with Apple Maps-style UI
-- ✅ Implemented neighborhood aggregation by geolocation
-- ✅ Added 43 SF neighborhood coordinate mappings
-- ✅ Created MapView component with Leaflet for visualization
-- ✅ Added NeighborhoodHeatMap parent component with data loading
-- ✅ Implemented color-coded markers based on citation intensity
-- ✅ Added zoom functionality with street-level detail view
-- ✅ Generated sample heat map data files
-- ✅ Updated data processing pipeline to generate location aggregations
-- ✅ Integrated map into main page layout
+- ✅ Migrated from Leaflet to Google Maps Platform
+- ✅ Installed and configured Google Maps JavaScript API
+- ✅ Created MapView component using Google Maps
+- ✅ Implemented dynamic script loading for Google Maps
+- ✅ Added color-coded circular markers with custom icons
+- ✅ Implemented info windows with detailed statistics
+- ✅ Added zoom-based street-level marker visibility (zoom 15+)
+- ✅ Created GOOGLE_MAPS_SETUP.md comprehensive guide
+- ✅ Added .env.local.example for API key configuration
+- ✅ Updated NeighborhoodHeatMap with Google Maps branding
 - ✅ Build tested successfully with no errors
 - ✅ All linting passed
+- ✅ Zero TypeScript errors
 
 ================================================================================
 PROJECT OVERVIEW
@@ -30,7 +31,7 @@ Parking Citations data from 2020 onwards.
 Tech Stack:
 - Frontend: Next.js 14 (App Router), React 18, TypeScript
 - Styling: Tailwind CSS
-- Maps: React Leaflet + OpenStreetMap
+- Maps: Google Maps Platform (JavaScript API)
 - Data Processing: Python 3 with Pandas
 - Testing: Jest + React Testing Library (frontend), Pytest (backend)
 
@@ -306,19 +307,22 @@ Map Controls:
 
 Files: 
 - components/NeighborhoodHeatMap.tsx (Parent component)
-- components/MapView.tsx (Map rendering component)
+- components/MapView.tsx (Google Maps implementation)
+- GOOGLE_MAPS_SETUP.md (Setup guide)
+- .env.local.example (API key template)
 
 Features:
+✓ **Google Maps Platform integration** - Superior mapping data and UI
 ✓ Interactive map visualization of most fined SF neighborhoods
-✓ Apple Maps-style UI with custom styling
 ✓ Color-coded circular markers based on citation intensity
 ✓ Dynamic marker sizing based on citation count
 ✓ 43 San Francisco neighborhoods mapped with coordinates
 ✓ Heat map legend with 5-tier color coding
-✓ Popup tooltips with detailed statistics
-✓ Zoom functionality to see street-level details
+✓ Info windows with detailed statistics
+✓ Zoom-based street-level markers (appear at zoom 15+)
 ✓ Async data loading with loading states
 ✓ Client-side only (no SSR) using dynamic imports
+✓ Graceful error handling with setup instructions
 ✓ Responsive design
 
 Neighborhoods Covered:
@@ -341,14 +345,16 @@ Color Coding:
 - Lime (lowest): Bottom 20%
 
 Technical Implementation:
-- React Leaflet for map rendering
-- Leaflet CSS imported globally
+- **Google Maps JavaScript API** - Official Google mapping solution
+- Dynamic script loading (loads from Google CDN)
+- API key authentication via environment variables
 - Dynamic import to prevent SSR issues
-- Custom Apple Maps-style CSS
+- Custom marker icons using SymbolPath.CIRCLE
+- Info windows with HTML content
+- Event listeners for zoom-based marker visibility
 - Geodesic distance calculation for neighborhood assignment
 - Coordinate sampling (max 10k points) for performance
-- Smooth transitions and hover effects
-- Custom popup styling
+- Marker state management with refs
 
 Data Flow:
 1. Component loads neighborhood and coordinate data from JSON
@@ -362,8 +368,10 @@ Performance Optimizations:
 ✓ Dynamic imports for code splitting
 ✓ Coordinate sampling to limit render overhead
 ✓ Client-side only rendering (no SSR)
-✓ Efficient marker rendering with React Leaflet
-✓ Lazy loading of map component
+✓ Lazy Google Maps script loading
+✓ Event-driven street marker toggling
+✓ Optimized marker rendering with Google Maps API
+✓ Conditional script loading (checks if already loaded)
 
 ================================================================================
 TESTING STRATEGY
@@ -631,38 +639,48 @@ CHANGELOG
 ================================================================================
 
 Version 1.2.0 - October 15, 2025 (Current Session)
-- ✓ NEW: Interactive neighborhood heat map visualization
-- ✓ NEW: Apple Maps-style UI with Leaflet integration
+- ✓ NEW: **Google Maps Platform integration** with official JavaScript API
 - ✓ NEW: 43 San Francisco neighborhood mappings with coordinates
 - ✓ NEW: Geodesic distance-based neighborhood assignment algorithm
-- ✓ NEW: Color-coded markers based on citation intensity (5-tier system)
+- ✓ NEW: Color-coded circular markers (5-tier intensity system)
 - ✓ NEW: Dynamic marker sizing based on citation count
-- ✓ NEW: Zoom functionality revealing street-level details
+- ✓ NEW: Zoom-based street-level markers (appear at zoom 15+)
+- ✓ NEW: Info windows with detailed statistics
 - ✓ NEW: NeighborhoodHeatMap component with async data loading
-- ✓ NEW: MapView component with custom Apple Maps styling
+- ✓ NEW: MapView component using Google Maps JavaScript API
+- ✓ NEW: GOOGLE_MAPS_SETUP.md comprehensive setup guide
+- ✓ NEW: .env.local.example for API key configuration
+- ✓ NEW: Dynamic script loading for Google Maps
 - ✓ NEW: neighborhood_heatmap.json data file generation
 - ✓ NEW: coordinate_heatmap.json with sampled street coordinates
 - ✓ UPDATED: process_data.py with location aggregation logic
-- ✓ UPDATED: Main page to include heat map above leaderboard
-- ✓ ADDED: Custom CSS for Apple-like map controls and popups
+- ✓ UPDATED: Main page with Google Maps-branded map component
+- ✓ ADDED: Graceful error handling for missing API key
+- ✓ ADDED: Google Cloud setup instructions
 - ✓ ADDED: Heat map legend with color explanations
 - ✓ IMPROVED: Performance with coordinate sampling (10k max)
 
 Features:
-- Users can now visualize which SF neighborhoods have the most parking violations
+- **Google's superior mapping data** and satellite imagery
 - Interactive map allows exploration of citation hotspots
-- Zoom in to see individual citation locations at street level
+- Click markers for detailed info windows with statistics
+- Zoom to level 15+ to see individual citation locations
 - Color-coded visual system makes patterns immediately apparent
 - Responsive design works on mobile, tablet, and desktop
-- Apple-like UI provides familiar, intuitive user experience
+- Professional UI powered by Google Maps Platform
+- Free tier covers typical usage ($200 monthly credit)
 
 Technical Highlights:
-- Dynamic imports prevent SSR issues with Leaflet
+- Google Maps JavaScript API official integration
+- Dynamic script loading from Google CDN
+- API key authentication via environment variables
+- Dynamic imports prevent SSR issues
 - Efficient geodesic distance algorithm for neighborhood assignment
 - Smart coordinate sampling keeps file sizes and render times low
-- Custom CSS mimics Apple Maps aesthetic
+- Event-driven marker visibility based on zoom level
 - Fully type-safe TypeScript implementation
 - Zero linting errors
+- No npm dependencies for maps (CDN-only)
 
 Version 1.1.0 - October 14, 2025 (2:00 PM)
 - ✓ NEW: API download functionality with server-side filtering
