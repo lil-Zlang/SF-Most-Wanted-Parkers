@@ -2,7 +2,7 @@
 
 CREATE TABLE IF NOT EXISTS leaderboard (
   rank            INTEGER PRIMARY KEY,
-  plate           TEXT    NOT NULL UNIQUE,
+  plate           TEXT    NOT NULL,
   total_fines     NUMERIC NOT NULL,
   citation_count  INTEGER NOT NULL
 );

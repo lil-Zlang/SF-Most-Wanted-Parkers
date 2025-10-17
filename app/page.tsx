@@ -40,7 +40,7 @@ export default async function Home() {
             SF&apos;s Most Wanted Parkers
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            The official leaderboard of San Francisco&apos;s worst parking offenders since 2020
+            The official leaderboard of San Francisco&apos;s worst parking offenders since 2020 to 2025
           </p>
           <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
             <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -76,7 +76,7 @@ export default async function Home() {
         <div className="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-300">
           <p>
             Data sourced from SFMTA Parking Citations dataset. 
-            Updated with citations from January 1, 2020 onwards.
+            Updated with citations from January 1, 2020 to December 31, 2025.
           </p>
         </div>
       </div>

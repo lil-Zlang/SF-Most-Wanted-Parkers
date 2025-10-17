@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "SF's Most Wanted Parkers",
-  description: "The official leaderboard of San Francisco's worst parking offenders since 2020",
+  description: "The official leaderboard of San Francisco's worst parking offenders since 2020 to 2025",
   keywords: ["San Francisco", "parking", "citations", "tickets", "violations"],
 };
 
