@@ -1,0 +1,5 @@
+# Large data files that shouldn't be opened in editor
+public/data/all_plates_details.json
+public/data/*.json
+public/data/plates/
+

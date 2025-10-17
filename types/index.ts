@@ -19,11 +19,36 @@ export interface Citation {
 export interface PlateDetails {
   total_fines: number;
   citation_count: number;
+  plate_state?: string;
   favorite_violation: string;
   all_citations: Citation[];
 }
 
+/**
+ * @deprecated Use individual plate files instead (public/data/plates/{plate}.json)
+ * This interface is kept for backward compatibility but the massive
+ * all_plates_details.json file has been replaced with optimized structure.
+ */
 export interface AllPlatesDetails {
   [plate: string]: PlateDetails;
+}
+
+/**
+ * Plate index entry for quick lookups
+ * The plate index provides metadata about all plates without loading full details
+ */
+export interface PlateIndexEntry {
+  total_fines: number;
+  citation_count: number;
+  plate_state: string;
+  favorite_violation: string;
+  file: string; // Relative path to individual plate file
+}
+
+/**
+ * Plate index mapping
+ */
+export interface PlateIndex {
+  [plate: string]: PlateIndexEntry;
 }
 

@@ -2,7 +2,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { AllPlatesDetails, PlateDetails } from '@/types';
+import { PlateDetails } from '@/types';
+import { fetchPlateDetails } from '@/lib/db';
 
 // Dynamically import the map component with no SSR
 const TicketMap = dynamic(() => import('@/components/TicketMap'), {
@@ -21,16 +22,28 @@ interface PageProps {
 }
 
 /**
- * Load all plates details from JSON file
+ * Load plate details from individual plate file (optimized)
+ * 
+ * Instead of loading a massive 10M+ line JSON file, we now load
+ * individual plate files for better performance and memory efficiency.
  */
-async function getAllPlatesDetails(): Promise<AllPlatesDetails> {
+async function getPlateDetails(plateNumber: string): Promise<PlateDetails | null> {
+  // Try database first
   try {
-    const filePath = path.join(process.cwd(), 'public', 'data', 'all_plates_details.json');
-    const fileContents = await fs.readFile(filePath, 'utf8');
+    const dbResult = await fetchPlateDetails(plateNumber);
+    if (dbResult) return dbResult as PlateDetails;
+  } catch (err) {
+    console.error('DB error, falling back to file', err);
+  }
+
+  // Fallback to file storage (legacy)
+  try {
+    const plateFile = path.join(process.cwd(), 'public', 'data', 'plates', `${plateNumber}.json`);
+    await fs.access(plateFile);
+    const fileContents = await fs.readFile(plateFile, 'utf8');
     return JSON.parse(fileContents);
-  } catch (error) {
-    console.error('Error loading plates details:', error);
-    return {};
+  } catch {
+    return null;
   }
 }
 
@@ -41,8 +54,7 @@ async function getAllPlatesDetails(): Promise<AllPlatesDetails> {
  */
 export default async function PlatePage({ params }: PageProps) {
   const plateNumber = decodeURIComponent(params.plateNumber).toUpperCase();
-  const allPlatesDetails = await getAllPlatesDetails();
-  const plateDetails: PlateDetails | undefined = allPlatesDetails[plateNumber];
+  const plateDetails = await getPlateDetails(plateNumber);
 
   // Handle plate not found
   if (!plateDetails) {

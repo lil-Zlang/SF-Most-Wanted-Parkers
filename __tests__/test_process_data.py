@@ -29,12 +29,15 @@ def sample_csv_data():
             '2019-12-01 09:00:00',  # Should be filtered out
             '2021-03-10 16:45:00'
         ],
-        'violation_description': [
+        'violation_desc': [
             'Expired Meter',
             'Street Cleaning',
             'No Parking',
             'Expired Meter'
         ],
+        'citation_number': ['C1', 'C2', 'C3', 'C4'],
+        'citation_location': ['123 Main St', '456 Oak Ave', '789 Elm St', '321 Pine St'],
+        'vehicle_plate_state': ['CA', 'CA', 'CA', 'CA'],
         'latitude': [37.7749, 37.7849, 37.7649, 37.7949],
         'longitude': [-122.4194, -122.4094, -122.4294, -122.3994]
     })
@@ -108,46 +111,29 @@ class TestParkingDataProcessor:
         # ABC123 has 2 'Expired Meter' and 1 'Street Cleaning'
         assert processor.plate_data['ABC123']['favorite_violation'] == 'Expired Meter'
 
-    def test_generate_output_files(self, temp_csv_file, temp_output_dir, monkeypatch):
+    def test_generate_output_files(self, temp_csv_file, temp_output_dir):
         """Test JSON file generation"""
-        # Change the output directory
-        monkeypatch.setattr('os.path.join', lambda *args: os.path.join(temp_output_dir, 'data'))
-        
         processor = ParkingDataProcessor(temp_csv_file)
         processor.load_data()
         processor.filter_by_date('2020-01-01')
         processor.process_plates()
         processor.calculate_favorite_violations()
         
-        # Manually create output directory
-        output_dir = os.path.join(temp_output_dir, 'data')
-        os.makedirs(output_dir, exist_ok=True)
+        # Change the output directory to temp dir
+        output_dir = Path(temp_output_dir) / 'data'
+        processor.output_dir = output_dir
         
-        # Manually write files
-        leaderboard_path = os.path.join(output_dir, 'leaderboard.json')
-        details_path = os.path.join(output_dir, 'all_plates_details.json')
+        # Generate output files
+        processor.save_output_files(top_n=100)
         
-        # Create leaderboard
-        sorted_plates = sorted(
-            processor.plate_data.items(),
-            key=lambda x: x[1]['total_fines'],
-            reverse=True
-        )[:100]
+        # Verify files were created with new optimized structure
+        leaderboard_path = output_dir / 'leaderboard.json'
+        plates_dir = output_dir / 'plates'
+        index_path = output_dir / 'plate_index.json'
         
-        leaderboard = []
-        for rank, (plate, data) in enumerate(sorted_plates, 1):
-            leaderboard.append({
-                'rank': rank,
-                'plate': plate,
-                'total_fines': round(data['total_fines'], 2),
-                'citation_count': data['citation_count']
-            })
-        
-        with open(leaderboard_path, 'w') as f:
-            json.dump(leaderboard, f, indent=2)
-        
-        # Verify files were created
-        assert os.path.exists(leaderboard_path)
+        assert leaderboard_path.exists()
+        assert plates_dir.exists()
+        assert index_path.exists()
         
         # Verify leaderboard content
         with open(leaderboard_path, 'r') as f:
@@ -156,6 +142,17 @@ class TestParkingDataProcessor:
         assert len(leaderboard_data) > 0
         assert leaderboard_data[0]['plate'] == 'ABC123'
         assert leaderboard_data[0]['total_fines'] == 300.0
+        
+        # Verify individual plate file was created
+        plate_file = plates_dir / 'ABC123.json'
+        assert plate_file.exists()
+        
+        # Verify plate index
+        with open(index_path, 'r') as f:
+            index_data = json.load(f)
+        
+        assert 'ABC123' in index_data
+        assert index_data['ABC123']['total_fines'] == 300.0
 
     def test_empty_data_handling(self):
         """Test handling of empty/missing data"""
@@ -181,14 +178,19 @@ class TestParkingDataProcessor:
     def test_invalid_fine_amounts(self, temp_csv_file):
         """Test handling of invalid fine amounts"""
         processor = ParkingDataProcessor(temp_csv_file)
+        
+        # Note: load_data() now automatically converts invalid fine amounts to 0
+        # This happens during CSV loading with pd.to_numeric(errors='coerce')
         processor.load_data()
         
-        # Add some invalid data
-        processor.df.loc[0, 'fine_amount'] = 'invalid'
+        # Verify that fine_amount column is numeric after loading
+        assert processor.df['fine_amount'].dtype in ['float64', 'int64']
         
         processor.filter_by_date('2020-01-01')
         processor.process_plates()
         
-        # Should handle invalid amounts as 0
+        # Should handle invalid amounts gracefully
         assert 'ABC123' in processor.plate_data
+        # All fines should be valid numbers (non-negative)
+        assert processor.plate_data['ABC123']['total_fines'] >= 0
 

@@ -2,8 +2,9 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import SearchBar from '@/components/SearchBar';
 import LeaderboardTable from '@/components/LeaderboardTable';
-import NeighborhoodHeatMap from '@/components/NeighborhoodHeatMap';
+import CitationHeatMap from '@/components/CitationHeatMap';
 import { LeaderboardEntry } from '@/types';
+import { fetchLeaderboard } from '@/lib/db';
 
 /**
  * Main page - Displays the leaderboard of worst parking offenders
@@ -13,12 +14,17 @@ import { LeaderboardEntry } from '@/types';
  */
 async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
   try {
-    const filePath = path.join(process.cwd(), 'public', 'data', 'leaderboard.json');
-    const fileContents = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(fileContents);
-  } catch (error) {
-    console.error('Error loading leaderboard data:', error);
-    return [];
+    return await fetchLeaderboard(100);
+  } catch (err) {
+    console.error('DB error, falling back to file', err);
+    try {
+      const filePath = path.join(process.cwd(), 'public', 'data', 'leaderboard.json');
+      const fileContents = await fs.readFile(filePath, 'utf8');
+      return JSON.parse(fileContents);
+    } catch (error) {
+      console.error('Error loading leaderboard data:', error);
+      return [];
+    }
   }
 }
 
@@ -53,9 +59,9 @@ export default async function Home() {
         {/* Search Bar */}
         <SearchBar />
 
-        {/* Heat Map */}
+        {/* Citation Heat Map - 2025 Data */}
         <div className="mb-12">
-          <NeighborhoodHeatMap />
+          <CitationHeatMap />
         </div>
 
         {/* Leaderboard */}

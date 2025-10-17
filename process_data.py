@@ -1,29 +1,28 @@
-#!/usr/bin/env python3
 """
-SF's Most Wanted Parkers - Data Processing Script
+SF Most Wanted Parkers - Data Processing Script
 
-This script processes the SFMTA Parking Citations dataset to generate
-optimized JSON files for the web application.
+This script fetches parking citation data from SF Open Data Portal,
+processes it to identify the worst parking offenders, and generates
+structured JSON files for the web application.
 
 Usage:
-    # Download from API with filtering (recommended):
-    python process_data.py --api --start-date 2020-01-01 --limit 500000
-    
-    # Or process from CSV file:
-    python process_data.py <input_csv_file>
+    python process_data.py [--start-date YYYY-MM-DD] [--limit N]
 
-Output:
-    - public/data/leaderboard.json: Top 100 worst offenders
-    - public/data/all_plates_details.json: Complete plate details
+Requirements:
+    - requests: For API calls
+    - pandas: For data processing
+    - python-dotenv: For environment variables
 """
 
-import argparse
 import json
 import os
 import sys
-from collections import Counter, defaultdict
+import time
+from collections import Counter
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+from urllib.parse import urlencode
 
 import pandas as pd
 import requests
@@ -32,622 +31,638 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# SF Neighborhood boundaries (approximate centers)
-# These coordinates represent approximate central points for each neighborhood
-NEIGHBORHOOD_COORDS = {
-    # Downtown / Central Areas
-    "Chinatown": (37.7941, -122.4078),
-    "Financial District": (37.7946, -122.3999),
-    "Nob Hill": (37.7924, -122.4156),
-    "North Beach": (37.8005, -122.4098),
-    "Russian Hill": (37.8008, -122.4194),
-    "Telegraph Hill": (37.8025, -122.4058),
-    "Tenderloin": (37.7844, -122.4134),
-    "Union Square": (37.7880, -122.4075),
-    
-    # The Mission and Southeast
-    "Bernal Heights": (37.7419, -122.4157),
-    "The Castro": (37.7609, -122.4350),
-    "Dogpatch": (37.7609, -122.3892),
-    "Excelsior": (37.7247, -122.4267),
-    "Glen Park": (37.7331, -122.4339),
-    "Mission District": (37.7599, -122.4148),
-    "Mission Bay": (37.7706, -122.3920),
-    "Noe Valley": (37.7504, -122.4330),
-    "Portola": (37.7279, -122.4061),
-    "Potrero Hill": (37.7577, -122.3988),
-    "SoMa": (37.7749, -122.4194),
-    "Visitacion Valley": (37.7134, -122.4040),
-    
-    # West Side / Richmond and Sunset Districts
-    "Haight-Ashbury": (37.7697, -122.4479),
-    "Inner Richmond": (37.7802, -122.4668),
-    "Inner Sunset": (37.7630, -122.4730),
-    "Outer Richmond": (37.7758, -122.4965),
-    "Outer Sunset": (37.7574, -122.4966),
-    "Presidio": (37.7989, -122.4662),
-    "Richmond District": (37.7794, -122.4823),
-    "Sunset District": (37.7602, -122.4942),
-    "Twin Peaks": (37.7544, -122.4477),
-    "West Portal": (37.7407, -122.4655),
-    
-    # Northwest / Marina and Pacific Heights
-    "Cow Hollow": (37.7989, -122.4344),
-    "Marina District": (37.8043, -122.4410),
-    "Pacific Heights": (37.7922, -122.4366),
-    
-    # Other Notable Neighborhoods
-    "Alamo Square": (37.7766, -122.4341),
-    "Embarcadero": (37.7955, -122.3937),
-    "Fisherman's Wharf": (37.8080, -122.4177),
-    "Hayes Valley": (37.7756, -122.4250),
-    "Lower Haight": (37.7719, -122.4318),
-    "Lower Pacific Heights": (37.7880, -122.4340),
-    "Western Addition": (37.7827, -122.4331),
-}
-
-def get_nearest_neighborhood(lat: float, lon: float) -> str:
-    """
-    Find the nearest neighborhood to a given coordinate.
-    
-    Uses simple Euclidean distance for performance. For more accurate results,
-    you could use the Haversine formula, but this is sufficient for our purposes.
-    
-    Args:
-        lat: Latitude coordinate
-        lon: Longitude coordinate
-        
-    Returns:
-        Name of the nearest neighborhood
-    """
-    min_distance = float('inf')
-    nearest = "Unknown"
-    
-    for neighborhood, (n_lat, n_lon) in NEIGHBORHOOD_COORDS.items():
-        # Simple Euclidean distance (good enough for small areas)
-        distance = ((lat - n_lat) ** 2 + (lon - n_lon) ** 2) ** 0.5
-        if distance < min_distance:
-            min_distance = distance
-            nearest = neighborhood
-    
-    return nearest
-
 
 class ParkingDataProcessor:
-    """Processes parking citation data and generates JSON output files."""
+    """
+    Processes parking citation data from SF Open Data Portal.
     
-    # Socrata API endpoint for SFMTA Parking Citations
-    API_ENDPOINT = "https://data.sfgov.org/resource/ab4h-6ztd.json"
-    API_LIMIT_PER_REQUEST = 50000  # Socrata's max per request
-
-    def __init__(self, input_file: Optional[str] = None):
+    Fetches data via Socrata API, aggregates by plate number,
+    and generates leaderboard and detailed citation data.
+    """
+    
+    # Socrata API endpoints
+    BASE_URL = "https://data.sfgov.org/resource/ab4h-6ztd.json"
+    APP_TOKEN = os.getenv('SOCRATA_APP_TOKEN')  # Optional but recommended for higher rate limits
+    
+    # Field mappings
+    REQUIRED_FIELDS = [
+        'citation_number',
+        'citation_issued_datetime',
+        'violation_desc',
+        'citation_location',
+        'vehicle_plate_state',
+        'vehicle_plate',
+        'fine_amount',
+        'the_geom'  # Contains coordinates as Point geometry
+    ]
+    
+    def __init__(self, csv_file: Optional[str] = None, start_date: str = '2025-01-01'):
         """
         Initialize the processor.
-
-        Args:
-            input_file: Path to the input CSV file containing parking citations (optional)
-        """
-        self.input_file = input_file
-        self.df = None
-        self.plate_data = defaultdict(lambda: {
-            "total_fines": 0.0,
-            "citation_count": 0,
-            "violations": [],
-            "all_citations": []
-        })
-        self.location_data = defaultdict(lambda: {
-            "total_fines": 0.0,
-            "citation_count": 0,
-            "violations": [],
-            "coordinates": []
-        })
-        self.api_token = os.getenv('SOCRATA_APP_TOKEN', None)
-    
-    def download_from_api(
-        self, 
-        start_date: str = "2020-01-01",
-        end_date: Optional[str] = None,
-        limit: Optional[int] = None
-    ) -> None:
-        """
-        Download data directly from SF Open Data API with filtering.
-        
-        This method uses the Socrata API to fetch data with server-side filtering,
-        avoiding the need to download the entire 20M+ row dataset.
         
         Args:
-            start_date: Start date for filtering (YYYY-MM-DD format)
-            end_date: End date for filtering (YYYY-MM-DD format), None for today
-            limit: Maximum number of records to download, None for all matching records
-            
-        Note:
-            For better performance and higher rate limits, set the SOCRATA_APP_TOKEN
-            environment variable. Get a free token at: https://dev.socrata.com/register
+            csv_file: Optional path to CSV file (for backward compatibility with tests)
+            start_date: Start date for filtering citations (YYYY-MM-DD format)
         """
-        print(f"Downloading data from SF Open Data API...")
-        print(f"  Filtering: citations from {start_date} onwards")
-        if limit:
-            print(f"  Limit: {limit:,} records maximum")
+        self.csv_file = csv_file
+        self.start_date = pd.to_datetime(start_date)
+        self.df: Optional[pd.DataFrame] = None
+        self.plate_data: Dict[str, Dict[str, Any]] = {}
+        self.output_dir = Path('public/data')
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Build SoQL query for filtering
-        where_clause = f"citation_issued_datetime >= '{start_date}T00:00:00.000'"
-        if end_date:
-            where_clause += f" AND citation_issued_datetime <= '{end_date}T23:59:59.999'"
+    def fetch_from_api(self, limit: int = 100000, offset: int = 0) -> List[Dict]:
+        """
+        Fetch data from SF Open Data Socrata API.
         
-        # Prepare headers
-        headers = {}
-        if self.api_token:
-            headers['X-App-Token'] = self.api_token
-            print("  Using API token for higher rate limits")
-        else:
-            print("  Warning: No API token found. Consider setting SOCRATA_APP_TOKEN")
-            print("  Get a free token at: https://dev.socrata.com/register")
-        
-        # Download data in chunks
-        all_data = []
-        offset = 0
-        total_fetched = 0
-        
-        while True:
-            # Determine chunk size
-            chunk_limit = self.API_LIMIT_PER_REQUEST
-            if limit:
-                remaining = limit - total_fetched
-                if remaining <= 0:
-                    break
-                chunk_limit = min(chunk_limit, remaining)
+        Args:
+            limit: Maximum number of records to fetch per request
+            offset: Starting offset for pagination
             
-            # Build request parameters
-            params = {
-                '$where': where_clause,
-                '$limit': chunk_limit,
-                '$offset': offset,
-                '$order': 'citation_issued_datetime DESC'
-            }
+        Returns:
+            List of citation records
             
-            try:
-                # Make API request
-                response = requests.get(
-                    self.API_ENDPOINT,
-                    params=params,
-                    headers=headers,
-                    timeout=60
-                )
-                response.raise_for_status()
-                
-                chunk_data = response.json()
-                
-                if not chunk_data:
-                    # No more data
-                    break
-                
-                all_data.extend(chunk_data)
-                total_fetched += len(chunk_data)
-                print(f"  Fetched {total_fetched:,} records...", end='\r')
-                
-                # Check if we got less than requested (end of data)
-                if len(chunk_data) < chunk_limit:
-                    break
-                
-                offset += chunk_limit
-                
-            except requests.exceptions.RequestException as e:
-                print(f"\nError downloading data: {e}")
-                if all_data:
-                    print(f"Partial data downloaded: {len(all_data):,} records")
-                    break
-                else:
-                    sys.exit(1)
-        
-        print(f"\n✓ Downloaded {len(all_data):,} records from API")
-        
-        # Convert to DataFrame
-        self.df = pd.DataFrame(all_data)
-        
-        # Standardize column names from API format
-        column_mapping = {
-            'citation_issued_datetime': 'citation_issued_datetime',
-            'issued_datetime': 'citation_issued_datetime',
-            'rp_plate_state': 'plate_state',
-            'vehicle_plate_state': 'plate_state',
-            'plate': 'vehicle_plate',
-            'plate_number': 'vehicle_plate',
-            'fine_amount': 'fine_amount',
-            'violation_description': 'violation_description',
-            'violation_desc': 'violation_description',
-            'violation': 'violation_description',
-            'latitude': 'latitude',
-            'longitude': 'longitude',
-            'lat': 'latitude',
-            'lon': 'longitude'
+        Raises:
+            requests.RequestException: If API request fails
+        """
+        params = {
+            '$limit': limit,
+            '$offset': offset,
+            '$order': 'citation_issued_datetime DESC',
+            '$where': f"citation_issued_datetime >= '{self.start_date.strftime('%Y-%m-%d')}T00:00:00.000'",
+            '$select': ','.join(self.REQUIRED_FIELDS)
         }
         
-        # Only rename columns that exist
-        existing_mappings = {k: v for k, v in column_mapping.items() if k in self.df.columns}
-        self.df = self.df.rename(columns=existing_mappings)
+        headers = {}
+        if self.APP_TOKEN:
+            headers['X-App-Token'] = self.APP_TOKEN
+            
+        try:
+            print(f"Fetching records (offset: {offset}, limit: {limit})...")
+            response = requests.get(
+                self.BASE_URL,
+                params=params,
+                headers=headers,
+                timeout=60
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            print(f"✓ Fetched {len(data)} records")
+            return data
+            
+        except requests.exceptions.Timeout as e:
+            print(f"✗ Request timeout: {e}", file=sys.stderr)
+            raise
+        except requests.exceptions.RequestException as e:
+            print(f"✗ API request failed: {e}", file=sys.stderr)
+            if hasattr(e, 'response') and e.response is not None:
+                print(f"Response status: {e.response.status_code}", file=sys.stderr)
+                print(f"Response body: {e.response.text[:500]}", file=sys.stderr)
+            raise
+    
+    def fetch_all_data(self, batch_size: int = 50000) -> pd.DataFrame:
+        """
+        Fetch all available data from the API with pagination.
         
-        # Convert citation_issued_datetime to datetime if it's a string
-        if 'citation_issued_datetime' in self.df.columns:
-            self.df['citation_issued_datetime'] = pd.to_datetime(
-                self.df['citation_issued_datetime'],
+        Args:
+            batch_size: Number of records to fetch per request
+            
+        Returns:
+            DataFrame containing all fetched records
+        """
+        all_records = []
+        offset = 0
+        
+        print(f"\nFetching data from SF Open Data Portal...")
+        print(f"Start date: {self.start_date.strftime('%Y-%m-%d')}")
+        print(f"Batch size: {batch_size:,}\n")
+        
+        while True:
+            try:
+                batch = self.fetch_from_api(limit=batch_size, offset=offset)
+                
+                if not batch:
+                    print("No more records to fetch.\n")
+                    break
+                    
+                all_records.extend(batch)
+                offset += len(batch)
+                
+                # If we got fewer records than requested, we've reached the end
+                if len(batch) < batch_size:
+                    print("Reached end of available data.\n")
+                    break
+                    
+                # Rate limiting - be nice to the API
+                time.sleep(0.5)
+                
+            except Exception as e:
+                print(f"Error fetching batch at offset {offset}: {e}", file=sys.stderr)
+                # Try to continue with what we have
+                if all_records:
+                    print(f"Continuing with {len(all_records)} records fetched so far...")
+                    break
+                else:
+                    raise
+        
+        if not all_records:
+            print("Warning: No records fetched from API", file=sys.stderr)
+            return pd.DataFrame()
+        
+        print(f"Total records fetched: {len(all_records):,}\n")
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(all_records)
+        
+        # Clean and standardize the data
+        df = self._clean_data(df)
+        
+        return df
+    
+    def _clean_data(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Clean and standardize the fetched data.
+        
+        Args:
+            df: Raw DataFrame from API
+            
+        Returns:
+            Cleaned DataFrame
+        """
+        if df.empty:
+            return df
+        
+        print("Cleaning and standardizing data...")
+        
+        # Convert date column to datetime
+        if 'citation_issued_datetime' in df.columns:
+            df['citation_issued_datetime'] = pd.to_datetime(
+                df['citation_issued_datetime'],
                 errors='coerce'
             )
-
-    def load_data(self) -> None:
-        """Load the CSV data into a pandas DataFrame."""
-        print(f"Loading data from {self.input_file}...")
-        try:
-            self.df = pd.read_csv(self.input_file, low_memory=False)
-            print(f"Loaded {len(self.df)} rows")
-        except FileNotFoundError:
-            print(f"Error: File '{self.input_file}' not found.")
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error loading data: {e}")
-            sys.exit(1)
-
-    def filter_by_date(self, cutoff_date: str = "2020-01-01") -> None:
+        
+        # Convert fine_amount to numeric, handling errors
+        if 'fine_amount' in df.columns:
+            df['fine_amount'] = pd.to_numeric(
+                df['fine_amount'],
+                errors='coerce'
+            ).fillna(0.0)
+        
+        # Extract coordinates from the_geom field
+        if 'the_geom' in df.columns:
+            def extract_coords(geom):
+                """Extract lat/lon from GeoJSON Point geometry"""
+                if pd.isna(geom) or not isinstance(geom, dict):
+                    return None, None
+                try:
+                    coords = geom.get('coordinates', [])
+                    if len(coords) == 2:
+                        # GeoJSON format is [longitude, latitude]
+                        return coords[1], coords[0]  # Return as (lat, lon)
+                except:
+                    pass
+                return None, None
+            
+            # Apply extraction
+            coords = df['the_geom'].apply(extract_coords)
+            df['latitude'] = coords.apply(lambda x: x[0])
+            df['longitude'] = coords.apply(lambda x: x[1])
+            
+            print(f"  Extracted coordinates for {df['latitude'].notna().sum():,} records")
+        
+        # Clean plate numbers - remove whitespace and convert to uppercase
+        if 'vehicle_plate' in df.columns:
+            df['vehicle_plate'] = df['vehicle_plate'].astype(str).str.strip().str.upper()
+            # Filter out invalid plates
+            df = df[df['vehicle_plate'].str.len() > 0]
+            df = df[df['vehicle_plate'] != 'NAN']
+            df = df[df['vehicle_plate'] != 'NONE']
+        
+        # Drop rows with missing critical data
+        df = df.dropna(subset=['vehicle_plate', 'citation_issued_datetime'])
+        
+        # Remove duplicate citations (same citation number)
+        if 'citation_number' in df.columns:
+            df = df.drop_duplicates(subset=['citation_number'], keep='first')
+        
+        print(f"✓ Cleaned data: {len(df):,} valid records\n")
+        
+        return df
+    
+    def load_data(self):
         """
-        Filter data to only include citations on or after the cutoff date.
-
+        Load data from CSV file or API.
+        
+        For backward compatibility with tests, can load from CSV.
+        For production, fetches from API.
+        """
+        if self.csv_file and os.path.exists(self.csv_file):
+            print(f"Loading data from CSV file: {self.csv_file}")
+            self.df = pd.read_csv(self.csv_file)
+            
+            # Standardize column names and clean data
+            if 'citation_issued_datetime' in self.df.columns:
+                self.df['citation_issued_datetime'] = pd.to_datetime(
+                    self.df['citation_issued_datetime']
+                )
+            
+            # Convert fine_amount to numeric, handling errors
+            if 'fine_amount' in self.df.columns:
+                self.df['fine_amount'] = pd.to_numeric(
+                    self.df['fine_amount'],
+                    errors='coerce'
+                ).fillna(0.0)
+            
+            print(f"✓ Loaded {len(self.df):,} records from CSV\n")
+        else:
+            # Fetch from API
+            self.df = self.fetch_all_data()
+    
+    def filter_by_date(self, start_date: Optional[str] = None):
+        """
+        Filter citations by start date.
+        
         Args:
-            cutoff_date: ISO format date string (YYYY-MM-DD)
+            start_date: Start date in YYYY-MM-DD format (uses instance default if not provided)
         """
-        print(f"Filtering data from {cutoff_date} onwards...")
-        initial_count = len(self.df)
-
-        # Convert to datetime, handling various formats and errors
-        self.df['citation_issued_datetime'] = pd.to_datetime(
-            self.df['citation_issued_datetime'],
-            errors='coerce'
-        )
-
-        # Filter by date
-        cutoff = pd.to_datetime(cutoff_date)
-        self.df = self.df[self.df['citation_issued_datetime'] >= cutoff]
-
-        # Drop rows with null datetime
-        self.df = self.df.dropna(subset=['citation_issued_datetime'])
-
-        print(f"Filtered from {initial_count} to {len(self.df)} rows")
-
-    def process_plates(self) -> None:
-        """Group and aggregate data by license plate."""
-        print("Processing plates and aggregating data...")
-
-        # Ensure required columns exist
-        required_cols = ['vehicle_plate', 'fine_amount', 'violation_description']
-        optional_cols = ['latitude', 'longitude']
-
-        # Check for column variations
-        column_mapping = {}
-        for col in self.df.columns:
-            col_lower = col.lower().replace('_', '').replace(' ', '')
-            if 'plate' in col_lower and 'vehicle' in col_lower:
-                column_mapping['vehicle_plate'] = col
-            elif 'fine' in col_lower and 'amount' in col_lower:
-                column_mapping['fine_amount'] = col
-            elif 'violation' in col_lower and ('desc' in col_lower or 'description' in col_lower):
-                column_mapping['violation_description'] = col
-            elif col_lower == 'latitude' or col_lower == 'lat':
-                column_mapping['latitude'] = col
-            elif col_lower == 'longitude' or col_lower == 'lon' or col_lower == 'lng':
-                column_mapping['longitude'] = col
-
-        # Rename columns to standardized names
-        if column_mapping:
-            self.df = self.df.rename(columns=column_mapping)
-
-        # Verify we have minimum required columns
-        missing_cols = [col for col in required_cols if col not in self.df.columns]
-        if missing_cols:
-            print(f"Warning: Missing columns {missing_cols}. Attempting to continue...")
-
-        # Process each row
-        for _, row in self.df.iterrows():
-            try:
-                plate = str(row.get('vehicle_plate', '')).strip().upper()
-                if not plate or plate == 'NAN':
-                    continue
-
-                # Parse fine amount
-                fine_amount = 0.0
-                try:
-                    fine_amount = float(row.get('fine_amount', 0))
-                except (ValueError, TypeError):
-                    fine_amount = 0.0
-
-                # Get violation description
-                violation = str(row.get('violation_description', 'Unknown')).strip()
-                if violation.upper() == 'NAN':
-                    violation = 'Unknown'
-
-                # Get location data
-                lat = row.get('latitude', None)
-                lon = row.get('longitude', None)
-
-                # Convert lat/lon to float if possible
-                try:
-                    lat = float(lat) if pd.notna(lat) else None
-                    lon = float(lon) if pd.notna(lon) else None
-                except (ValueError, TypeError):
-                    lat = None
-                    lon = None
-
-                # Get citation datetime
-                citation_date = row.get('citation_issued_datetime')
-                if pd.notna(citation_date):
-                    # Handle both datetime objects and strings
-                    if hasattr(citation_date, 'isoformat'):
-                        citation_date_str = citation_date.isoformat()
-                    else:
-                        citation_date_str = str(citation_date)
-                else:
-                    citation_date_str = None
-
-                # Aggregate data
-                self.plate_data[plate]['total_fines'] += fine_amount
-                self.plate_data[plate]['citation_count'] += 1
-                self.plate_data[plate]['violations'].append(violation)
-
-                # Add citation details
-                citation_detail = {
-                    'date': citation_date_str,
-                    'violation': violation
-                }
-
-                # Only add lat/lon if both are valid
-                if lat is not None and lon is not None:
-                    citation_detail['latitude'] = lat
-                    citation_detail['longitude'] = lon
-                    
-                    # Aggregate by neighborhood for heat map
-                    neighborhood = get_nearest_neighborhood(lat, lon)
-                    self.location_data[neighborhood]['total_fines'] += fine_amount
-                    self.location_data[neighborhood]['citation_count'] += 1
-                    self.location_data[neighborhood]['violations'].append(violation)
-                    self.location_data[neighborhood]['coordinates'].append({
-                        'lat': lat,
-                        'lon': lon,
-                        'fine': fine_amount,
-                        'violation': violation
-                    })
-
-                self.plate_data[plate]['all_citations'].append(citation_detail)
-
-            except Exception as e:
-                print(f"Warning: Error processing row: {e}")
+        if start_date:
+            self.start_date = pd.to_datetime(start_date)
+        
+        if self.df is None or self.df.empty:
+            print("Warning: No data to filter", file=sys.stderr)
+            return
+        
+        print(f"Filtering citations since {self.start_date.strftime('%Y-%m-%d')}...")
+        
+        original_count = len(self.df)
+        self.df = self.df[self.df['citation_issued_datetime'] >= self.start_date]
+        filtered_count = len(self.df)
+        
+        print(f"✓ Kept {filtered_count:,} of {original_count:,} records "
+              f"({filtered_count/original_count*100:.1f}%)\n")
+    
+    def process_plates(self):
+        """
+        Group citations by plate and calculate aggregated statistics.
+        """
+        if self.df is None or self.df.empty:
+            print("Warning: No data to process", file=sys.stderr)
+            self.plate_data = {}
+            return
+        
+        print("Processing plates and calculating statistics...")
+        
+        self.plate_data = {}
+        
+        # Group by vehicle plate
+        grouped = self.df.groupby('vehicle_plate')
+        
+        for plate, group in grouped:
+            # Skip invalid plates
+            if not plate or plate == '' or pd.isna(plate):
                 continue
-
-        print(f"Processed {len(self.plate_data)} unique plates")
-
-    def calculate_favorite_violations(self) -> None:
-        """Calculate the most frequent violation for each plate."""
+            
+            # Calculate aggregated statistics
+            total_fines = float(group['fine_amount'].sum())
+            citation_count = len(group)
+            
+            # Get plate state (most common one if multiple)
+            plate_state = 'CA'  # Default
+            if 'vehicle_plate_state' in group.columns:
+                state_counts = group['vehicle_plate_state'].value_counts()
+                if len(state_counts) > 0:
+                    plate_state = state_counts.index[0]
+            
+            # Store all citations for this plate
+            all_citations = []
+            for _, row in group.iterrows():
+                citation = {
+                    'citation_number': str(row.get('citation_number', '')),
+                    'date': row['citation_issued_datetime'].isoformat() if pd.notna(row['citation_issued_datetime']) else None,
+                    'violation': str(row.get('violation_desc', 'Unknown')),
+                    'location': str(row.get('citation_location', '')),
+                    'fine_amount': float(row.get('fine_amount', 0.0))
+                }
+                
+                # Add coordinates if available
+                if 'latitude' in row and 'longitude' in row:
+                    if pd.notna(row['latitude']) and pd.notna(row['longitude']):
+                        citation['latitude'] = float(row['latitude'])
+                        citation['longitude'] = float(row['longitude'])
+                
+                all_citations.append(citation)
+            
+            # Sort citations by date (newest first)
+            all_citations.sort(key=lambda x: x['date'] or '', reverse=True)
+            
+            self.plate_data[plate] = {
+                'total_fines': total_fines,
+                'citation_count': citation_count,
+                'plate_state': plate_state,
+                'all_citations': all_citations
+            }
+        
+        print(f"✓ Processed {len(self.plate_data):,} unique plates\n")
+    
+    def calculate_favorite_violations(self):
+        """
+        Calculate the most common violation type for each plate.
+        """
+        if not self.plate_data:
+            print("Warning: No plate data to process", file=sys.stderr)
+            return
+        
         print("Calculating favorite violations...")
+        
         for plate, data in self.plate_data.items():
-            if data['violations']:
-                # Find most common violation
-                violation_counter = Counter(data['violations'])
-                favorite = violation_counter.most_common(1)[0][0]
+            # Count violations
+            violations = [c['violation'] for c in data['all_citations']]
+            if violations:
+                violation_counts = Counter(violations)
+                favorite = violation_counts.most_common(1)[0][0]
                 data['favorite_violation'] = favorite
             else:
                 data['favorite_violation'] = 'Unknown'
-
-            # Remove the violations list as it's no longer needed
-            del data['violations']
-
-    def generate_output_files(self) -> None:
-        """Generate the leaderboard and all_plates_details JSON files."""
-        print("Generating output files...")
-
-        # Create output directory if it doesn't exist
-        output_dir = os.path.join('public', 'data')
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Generate leaderboard (top 100)
+        
+        print("✓ Calculated favorite violations\n")
+    
+    def generate_leaderboard(self, top_n: int = 100) -> List[Dict]:
+        """
+        Generate leaderboard of worst offenders.
+        
+        Args:
+            top_n: Number of top offenders to include
+            
+        Returns:
+            List of leaderboard entries
+        """
+        print(f"Generating top {top_n} leaderboard...")
+        
+        # Sort plates by total fines
         sorted_plates = sorted(
             self.plate_data.items(),
-            key=lambda x: x[1]['total_fines'],
+            key=lambda x: (x[1]['total_fines'], x[1]['citation_count']),
             reverse=True
-        )[:100]
-
+        )[:top_n]
+        
         leaderboard = []
         for rank, (plate, data) in enumerate(sorted_plates, 1):
             leaderboard.append({
                 'rank': rank,
                 'plate': plate,
-                'total_fines': round(data['total_fines'], 2),
-                'citation_count': data['citation_count']
-            })
-
-        # Write leaderboard.json
-        leaderboard_path = os.path.join(output_dir, 'leaderboard.json')
-        with open(leaderboard_path, 'w') as f:
-            json.dump(leaderboard, f, indent=2)
-        print(f"Created {leaderboard_path} with {len(leaderboard)} entries")
-
-        # Generate all_plates_details
-        all_plates_details = {}
-        for plate, data in self.plate_data.items():
-            all_plates_details[plate] = {
+                'plate_state': data.get('plate_state', 'CA'),
                 'total_fines': round(data['total_fines'], 2),
                 'citation_count': data['citation_count'],
-                'favorite_violation': data['favorite_violation'],
-                'all_citations': data['all_citations']
-            }
-
-        # Write all_plates_details.json
-        details_path = os.path.join(output_dir, 'all_plates_details.json')
-        with open(details_path, 'w') as f:
-            json.dump(all_plates_details, f, indent=2)
-        print(f"Created {details_path} with {len(all_plates_details)} plates")
+                'favorite_violation': data.get('favorite_violation', 'Unknown')
+            })
         
-        # Generate location heat map data
-        self._generate_location_heatmap()
+        print(f"✓ Generated leaderboard with {len(leaderboard)} entries\n")
+        
+        return leaderboard
     
-    def _generate_location_heatmap(self) -> None:
-        """Generate heat map data for neighborhoods and coordinates."""
-        print("Generating location heat map data...")
+    def generate_heatmap_data(self):
+        """
+        Generate street-level heat map data for visualization.
         
-        output_dir = os.path.join('public', 'data')
+        Strategy: Use citation_location (street address) to aggregate all citations.
+        The frontend will use Google Maps to geocode and display these addresses.
+        This works for ALL citations, not just those with coordinates.
         
-        # Aggregate by neighborhood
-        neighborhood_data = []
-        for neighborhood, data in self.location_data.items():
-            if data['citation_count'] > 0:
-                # Get neighborhood center coordinates
-                center = NEIGHBORHOOD_COORDS.get(neighborhood, (37.7749, -122.4194))
+        Creates two files:
+        1. street_heatmap.json - Top locations with citation counts and violation breakdowns
+        2. violation_summary.json - Overview of violation types across the city
+        """
+        if self.df is None or self.df.empty:
+            print("Warning: No data available for heat map generation", file=sys.stderr)
+            return
+        
+        print("Generating heat map data...")
+        
+        # Filter to only 2025 data for current year visualization
+        current_year_start = pd.to_datetime('2025-01-01')
+        df_2025 = self.df[self.df['citation_issued_datetime'] >= current_year_start].copy()
+        
+        print(f"  Using {len(df_2025):,} citations from 2025")
+        
+        # Street-level aggregation using citation_location
+        street_aggregations = []
+        
+        if 'citation_location' in df_2025.columns:
+            location_groups = df_2025.groupby('citation_location')
+            
+            for location, group in location_groups:
+                # Skip empty/invalid locations
+                if not location or location == '' or pd.isna(location):
+                    continue
                 
-                # Calculate most common violation
-                violation_counter = Counter(data['violations'])
-                top_violation = violation_counter.most_common(1)[0][0] if violation_counter else "Unknown"
+                # Count violations by type
+                violation_counts = Counter()
+                if 'violation_desc' in group.columns:
+                    violation_counts = Counter(group['violation_desc'].dropna())
                 
-                neighborhood_data.append({
-                    'neighborhood': neighborhood,
-                    'latitude': center[0],
-                    'longitude': center[1],
-                    'total_fines': round(data['total_fines'], 2),
-                    'citation_count': data['citation_count'],
-                    'top_violation': top_violation,
-                    'intensity': data['citation_count']  # For heat map visualization
+                # Get top violations
+                top_violations = dict(violation_counts.most_common(5))
+                
+                street_aggregations.append({
+                    'location': str(location),  # Street address (e.g., "100 MARKET ST")
+                    'citation_count': len(group),
+                    'total_fines': float(group['fine_amount'].sum()) if 'fine_amount' in group.columns else 0,
+                    'top_violation': violation_counts.most_common(1)[0][0] if violation_counts else 'Unknown',
+                    'violation_breakdown': {str(k): int(v) for k, v in top_violations.items()},
                 })
         
-        # Sort by citation count
-        neighborhood_data.sort(key=lambda x: x['citation_count'], reverse=True)
+        # Sort by citation count and keep top locations (limit to reduce file size)
+        street_aggregations.sort(key=lambda x: x['citation_count'], reverse=True)
         
-        # Write neighborhood_heatmap.json
-        heatmap_path = os.path.join(output_dir, 'neighborhood_heatmap.json')
-        with open(heatmap_path, 'w') as f:
-            json.dump(neighborhood_data, f, indent=2)
-        print(f"Created {heatmap_path} with {len(neighborhood_data)} neighborhoods")
+        # Keep top 1000 locations for performance
+        top_locations = street_aggregations[:1000]
         
-        # Generate detailed coordinate data for street-level view
-        # Sample coordinates to keep file size reasonable (max 10,000 points)
-        all_coords = []
-        for neighborhood, data in self.location_data.items():
-            all_coords.extend(data['coordinates'])
+        print(f"  Generated {len(street_aggregations):,} unique street locations")
+        print(f"  Keeping top {len(top_locations):,} locations for heat map")
         
-        # Sample if too many points
-        if len(all_coords) > 10000:
-            import random
-            all_coords = random.sample(all_coords, 10000)
-            print(f"Sampled 10,000 coordinates from {len(all_coords)} total")
+        # Save street heat map data
+        street_heatmap_path = self.output_dir / 'street_heatmap.json'
+        with open(street_heatmap_path, 'w', encoding='utf-8') as f:
+            json.dump(top_locations, f, indent=2, ensure_ascii=False)
         
-        # Write coordinate_heatmap.json
-        coords_path = os.path.join(output_dir, 'coordinate_heatmap.json')
-        with open(coords_path, 'w') as f:
-            json.dump(all_coords, f, indent=2)
-        print(f"Created {coords_path} with {len(all_coords)} coordinate points")
-
-    def process(
-        self, 
-        use_api: bool = False,
-        start_date: str = "2020-01-01",
-        end_date: Optional[str] = None,
-        limit: Optional[int] = None
-    ) -> None:
+        print(f"✓ Saved street heat map: {street_heatmap_path}")
+        
+        # Generate violation type summary
+        violation_summary = {}
+        if 'violation_desc' in df_2025.columns:
+            violation_counts = df_2025['violation_desc'].value_counts()
+            for violation, count in violation_counts.head(20).items():
+                violation_summary[str(violation)] = int(count)
+        
+        violation_summary_path = self.output_dir / 'violation_summary.json'
+        with open(violation_summary_path, 'w', encoding='utf-8') as f:
+            json.dump(violation_summary, f, indent=2, ensure_ascii=False)
+        
+        print(f"✓ Saved violation summary: {violation_summary_path}\n")
+    
+    def save_output_files(self, top_n: int = 100):
         """
-        Execute the complete data processing pipeline.
+        Save processed data to JSON files in optimized format.
+        
+        Saves individual plate files instead of one massive JSON file
+        for better performance and memory efficiency.
         
         Args:
-            use_api: If True, download from API instead of loading CSV
-            start_date: Start date for filtering (applies to both API and CSV)
-            end_date: End date for filtering (API only)
-            limit: Maximum records to download (API only)
+            top_n: Number of top offenders to include in leaderboard
         """
-        if use_api:
-            self.download_from_api(start_date, end_date, limit)
-        else:
-            self.load_data()
-            self.filter_by_date(start_date)
+        print("Saving output files (optimized structure)...")
         
-        self.process_plates()
-        self.calculate_favorite_violations()
-        self.generate_output_files()
-        print("✓ Data processing complete!")
+        # Ensure output directory exists
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate and save leaderboard
+        leaderboard = self.generate_leaderboard(top_n)
+        leaderboard_path = self.output_dir / 'leaderboard.json'
+        
+        with open(leaderboard_path, 'w', encoding='utf-8') as f:
+            json.dump(leaderboard, f, indent=2, ensure_ascii=False)
+        
+        print(f"✓ Saved leaderboard: {leaderboard_path}")
+        
+        # Create plates directory for individual plate files
+        plates_dir = self.output_dir / 'plates'
+        plates_dir.mkdir(exist_ok=True)
+        
+        # Create index file for quick lookups
+        plate_index = {}
+        
+        print(f"Saving individual plate files...")
+        for i, (plate, data) in enumerate(self.plate_data.items(), 1):
+            # Save each plate's data in separate file
+            plate_file = plates_dir / f"{plate}.json"
+            with open(plate_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            # Add to index
+            plate_index[plate] = {
+                'total_fines': data['total_fines'],
+                'citation_count': data['citation_count'],
+                'plate_state': data.get('plate_state', 'CA'),
+                'favorite_violation': data.get('favorite_violation', 'Unknown'),
+                'file': f"plates/{plate}.json"
+            }
+            
+            # Progress indicator for large datasets
+            if i % 1000 == 0:
+                print(f"  Progress: {i:,} / {len(self.plate_data):,} plates saved")
+        
+        print(f"✓ Saved {len(self.plate_data):,} individual plate files to {plates_dir}")
+        
+        # Save plate index
+        index_path = self.output_dir / 'plate_index.json'
+        with open(index_path, 'w', encoding='utf-8') as f:
+            json.dump(plate_index, f, indent=2, ensure_ascii=False)
+        
+        print(f"✓ Saved plate index: {index_path}")
+        
+        # Print summary statistics
+        print("\n" + "="*60)
+        print("SUMMARY STATISTICS")
+        print("="*60)
+        print(f"Total unique plates: {len(self.plate_data):,}")
+        print(f"Total citations: {sum(d['citation_count'] for d in self.plate_data.values()):,}")
+        print(f"Total fines: ${sum(d['total_fines'] for d in self.plate_data.values()):,.2f}")
+        
+        if leaderboard:
+            print(f"\nTop offender: {leaderboard[0]['plate']} "
+                  f"(${leaderboard[0]['total_fines']:,.2f}, "
+                  f"{leaderboard[0]['citation_count']} citations)")
+        
+        print("="*60 + "\n")
+    
+    def run(self, top_n: int = 100):
+        """
+        Run the complete data processing pipeline.
+        
+        Args:
+            top_n: Number of top offenders to include in leaderboard
+        """
+        print("\n" + "="*60)
+        print("SF MOST WANTED PARKERS - DATA PROCESSING")
+        print("="*60 + "\n")
+        
+        start_time = time.time()
+        
+        try:
+            # Step 1: Load data
+            self.load_data()
+            
+            if self.df is None or self.df.empty:
+                print("Error: No data loaded. Exiting.", file=sys.stderr)
+                return
+            
+            # Step 2: Filter by date
+            self.filter_by_date()
+            
+            # Step 3: Process plates
+            self.process_plates()
+            
+            # Step 4: Calculate favorite violations
+            self.calculate_favorite_violations()
+            
+            # Step 5: Generate heat map data
+            self.generate_heatmap_data()
+            
+            # Step 6: Save output files
+            self.save_output_files(top_n)
+            
+            elapsed = time.time() - start_time
+            print(f"✓ Processing complete in {elapsed:.1f} seconds\n")
+            
+        except Exception as e:
+            print(f"\n✗ Error during processing: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
 
 
 def main():
     """Main entry point for the script."""
-    parser = argparse.ArgumentParser(
-        description='Process SFMTA Parking Citations data',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Download from API with default filters (2020 onwards, max 500k records):
-  python process_data.py --api
-  
-  # Download from API with custom date range and limit:
-  python process_data.py --api --start-date 2022-01-01 --limit 1000000
-  
-  # Download specific date range:
-  python process_data.py --api --start-date 2023-01-01 --end-date 2023-12-31
-  
-  # Process from CSV file:
-  python process_data.py parking_citations.csv
-  
-  # Process from CSV with custom start date:
-  python process_data.py parking_citations.csv --start-date 2021-01-01
-
-API Setup (optional but recommended):
-  1. Register for a free API token at: https://dev.socrata.com/register
-  2. Create a .env file in the project root with:
-     SOCRATA_APP_TOKEN=your_token_here
-  3. This gives you higher rate limits and faster downloads
-        """
-    )
+    import argparse
     
-    parser.add_argument(
-        'input_file',
-        nargs='?',
-        help='Path to input CSV file (not needed if using --api)'
-    )
-    parser.add_argument(
-        '--api',
-        action='store_true',
-        help='Download data directly from SF Open Data API (recommended)'
+    parser = argparse.ArgumentParser(
+        description='Fetch and process SF parking citation data'
     )
     parser.add_argument(
         '--start-date',
-        default='2020-01-01',
-        help='Start date for filtering (YYYY-MM-DD). Default: 2020-01-01'
+        default='2025-01-01',
+        help='Start date for filtering citations (YYYY-MM-DD). Default: 2025-01-01'
     )
     parser.add_argument(
-        '--end-date',
-        default=None,
-        help='End date for filtering (YYYY-MM-DD). Default: today'
-    )
-    parser.add_argument(
-        '--limit',
+        '--top-n',
         type=int,
-        default=500000,
-        help='Maximum number of records to download (API mode only). Default: 500000. Use 0 for no limit.'
+        default=100,
+        help='Number of top offenders to include in leaderboard. Default: 100'
+    )
+    parser.add_argument(
+        '--csv',
+        help='Optional: Load data from CSV file instead of API'
     )
     
     args = parser.parse_args()
     
-    # Validate arguments
-    if not args.api and not args.input_file:
-        parser.error("Either provide an input CSV file or use --api to download from API")
+    # Validate date format
+    try:
+        pd.to_datetime(args.start_date)
+    except Exception as e:
+        print(f"Error: Invalid date format '{args.start_date}'. Use YYYY-MM-DD", file=sys.stderr)
+        sys.exit(1)
     
-    if args.api and args.input_file:
-        print("Warning: Both --api and input file provided. Using API mode.")
-    
-    # Process limit argument
-    limit = None if args.limit == 0 else args.limit
-    
-    # Initialize processor
-    processor = ParkingDataProcessor(args.input_file)
-    
-    # Run processing
-    processor.process(
-        use_api=args.api,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        limit=limit
+    # Create processor and run
+    processor = ParkingDataProcessor(
+        csv_file=args.csv,
+        start_date=args.start_date
     )
+    processor.run(top_n=args.top_n)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
+
 

@@ -11,6 +11,8 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
+    "dotenv": "^17.2.3",
     "leaflet": "^1.9.4",
     "next": "^14.2.0",
     "react": "^18.3.0",
