@@ -1,0 +1,802 @@
+[
+  {
+    "rank": 1,
+    "plate": "70426W1",
+    "plate_state": "CA",
+    "total_fines": 20746.0,
+    "citation_count": 189,
+    "favorite_violation": "PRK PROHIB"
+  },
+  {
+    "rank": 2,
+    "plate": "56358P2",
+    "plate_state": "CA",
+    "total_fines": 19296.0,
+    "citation_count": 179,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 3,
+    "plate": "9EQP478",
+    "plate_state": "CA",
+    "total_fines": 19238.0,
+    "citation_count": 187,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 4,
+    "plate": "16673X1",
+    "plate_state": "CA",
+    "total_fines": 17378.0,
+    "citation_count": 161,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 5,
+    "plate": "16667X1",
+    "plate_state": "CA",
+    "total_fines": 16632.0,
+    "citation_count": 154,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 6,
+    "plate": "9JFX959",
+    "plate_state": "CA",
+    "total_fines": 16492.0,
+    "citation_count": 144,
+    "favorite_violation": "PK PHB OTD"
+  },
+  {
+    "rank": 7,
+    "plate": "11932J2",
+    "plate_state": "CA",
+    "total_fines": 16213.0,
+    "citation_count": 144,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 8,
+    "plate": "8NCE903",
+    "plate_state": "CA",
+    "total_fines": 15341.0,
+    "citation_count": 144,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 9,
+    "plate": "25968R2",
+    "plate_state": "CA",
+    "total_fines": 15125.0,
+    "citation_count": 132,
+    "favorite_violation": "DBL PARK"
+  },
+  {
+    "rank": 10,
+    "plate": "EP10871",
+    "plate_state": "CA",
+    "total_fines": 15120.0,
+    "citation_count": 140,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 11,
+    "plate": "BRR4427",
+    "plate_state": "WA",
+    "total_fines": 15064.0,
+    "citation_count": 148,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 12,
+    "plate": "9HYT502",
+    "plate_state": "CA",
+    "total_fines": 15031.0,
+    "citation_count": 136,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 13,
+    "plate": "04547W3",
+    "plate_state": "CA",
+    "total_fines": 14836.0,
+    "citation_count": 128,
+    "favorite_violation": "PRK PROHIB"
+  },
+  {
+    "rank": 14,
+    "plate": "EP19455",
+    "plate_state": "CA",
+    "total_fines": 14688.0,
+    "citation_count": 136,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 15,
+    "plate": "82775A2",
+    "plate_state": "CA",
+    "total_fines": 14580.0,
+    "citation_count": 135,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 16,
+    "plate": "95063H2",
+    "plate_state": "CA",
+    "total_fines": 14213.0,
+    "citation_count": 132,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 17,
+    "plate": "7TQN093",
+    "plate_state": "CA",
+    "total_fines": 14018.0,
+    "citation_count": 133,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 18,
+    "plate": "7HYR777",
+    "plate_state": "CA",
+    "total_fines": 13468.0,
+    "citation_count": 126,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 19,
+    "plate": "6TEP921",
+    "plate_state": "CA",
+    "total_fines": 12890.0,
+    "citation_count": 129,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 20,
+    "plate": "70358W1",
+    "plate_state": "CA",
+    "total_fines": 12852.0,
+    "citation_count": 119,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 21,
+    "plate": "9GJJ098",
+    "plate_state": "CA",
+    "total_fines": 12497.0,
+    "citation_count": 121,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 22,
+    "plate": "70356W1",
+    "plate_state": "CA",
+    "total_fines": 12481.0,
+    "citation_count": 112,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 23,
+    "plate": "82772A2",
+    "plate_state": "CA",
+    "total_fines": 12420.0,
+    "citation_count": 115,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 24,
+    "plate": "95098H2",
+    "plate_state": "CA",
+    "total_fines": 12256.0,
+    "citation_count": 108,
+    "favorite_violation": "DBL PARK"
+  },
+  {
+    "rank": 25,
+    "plate": "4HCD234",
+    "plate_state": "CA",
+    "total_fines": 12231.0,
+    "citation_count": 115,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 26,
+    "plate": "9LHM771",
+    "plate_state": "CA",
+    "total_fines": 12101.0,
+    "citation_count": 118,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 27,
+    "plate": "7LSP673",
+    "plate_state": "CA",
+    "total_fines": 11990.0,
+    "citation_count": 118,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 28,
+    "plate": "24010R2",
+    "plate_state": "CA",
+    "total_fines": 11772.0,
+    "citation_count": 110,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 29,
+    "plate": "9KDZ577",
+    "plate_state": "CA",
+    "total_fines": 11730.0,
+    "citation_count": 112,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 30,
+    "plate": "8ALU169",
+    "plate_state": "CA",
+    "total_fines": 11681.0,
+    "citation_count": 29,
+    "favorite_violation": "ON ST LST"
+  },
+  {
+    "rank": 31,
+    "plate": "6EGX777",
+    "plate_state": "CA",
+    "total_fines": 11602.0,
+    "citation_count": 104,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 32,
+    "plate": "11960S2",
+    "plate_state": "CA",
+    "total_fines": 11271.0,
+    "citation_count": 100,
+    "favorite_violation": "TRNST ONLY"
+  },
+  {
+    "rank": 33,
+    "plate": "24114R2",
+    "plate_state": "CA",
+    "total_fines": 11124.0,
+    "citation_count": 103,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 34,
+    "plate": "8ZCX018",
+    "plate_state": "CA",
+    "total_fines": 10687.0,
+    "citation_count": 106,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 35,
+    "plate": "8VKN469",
+    "plate_state": "CA",
+    "total_fines": 10644.0,
+    "citation_count": 100,
+    "favorite_violation": "RED ZONE"
+  },
+  {
+    "rank": 36,
+    "plate": "9RYE333",
+    "plate_state": "CA",
+    "total_fines": 10345.0,
+    "citation_count": 100,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 37,
+    "plate": "89604G2",
+    "plate_state": "CA",
+    "total_fines": 10202.0,
+    "citation_count": 94,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 38,
+    "plate": "HJ08488",
+    "plate_state": "PA",
+    "total_fines": 10116.0,
+    "citation_count": 84,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 39,
+    "plate": "NVRFEER",
+    "plate_state": "CA",
+    "total_fines": 10092.0,
+    "citation_count": 92,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 40,
+    "plate": "75566B2",
+    "plate_state": "CA",
+    "total_fines": 10083.0,
+    "citation_count": 78,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 41,
+    "plate": "2ZSJ821",
+    "plate_state": "CA",
+    "total_fines": 9761.0,
+    "citation_count": 99,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 42,
+    "plate": "9RDZ753",
+    "plate_state": "CA",
+    "total_fines": 9712.0,
+    "citation_count": 93,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 43,
+    "plate": "10304W2",
+    "plate_state": "CA",
+    "total_fines": 9612.0,
+    "citation_count": 90,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 44,
+    "plate": "EP08608",
+    "plate_state": "CA",
+    "total_fines": 9612.0,
+    "citation_count": 89,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 45,
+    "plate": "4NFB256",
+    "plate_state": "CA",
+    "total_fines": 9524.0,
+    "citation_count": 92,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 46,
+    "plate": "EP19454",
+    "plate_state": "CA",
+    "total_fines": 9504.0,
+    "citation_count": 88,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 47,
+    "plate": "82776A2",
+    "plate_state": "CA",
+    "total_fines": 9407.0,
+    "citation_count": 84,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 48,
+    "plate": "43410W2",
+    "plate_state": "CA",
+    "total_fines": 9396.0,
+    "citation_count": 87,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 49,
+    "plate": "9KKJ151",
+    "plate_state": "CA",
+    "total_fines": 9323.0,
+    "citation_count": 73,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 50,
+    "plate": "75990B2",
+    "plate_state": "CA",
+    "total_fines": 9217.0,
+    "citation_count": 55,
+    "favorite_violation": "BLK BIKE L"
+  },
+  {
+    "rank": 51,
+    "plate": "81526G1",
+    "plate_state": "CA",
+    "total_fines": 9180.0,
+    "citation_count": 86,
+    "favorite_violation": "PRK PROHIB"
+  },
+  {
+    "rank": 52,
+    "plate": "6FRW211",
+    "plate_state": "CA",
+    "total_fines": 9023.0,
+    "citation_count": 54,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 53,
+    "plate": "9NTN254",
+    "plate_state": "CA",
+    "total_fines": 8995.0,
+    "citation_count": 83,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 54,
+    "plate": "4WWD014",
+    "plate_state": "CA",
+    "total_fines": 8802.0,
+    "citation_count": 84,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 55,
+    "plate": "8RHY963",
+    "plate_state": "CA",
+    "total_fines": 8676.0,
+    "citation_count": 77,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 56,
+    "plate": "6UIP352",
+    "plate_state": "CA",
+    "total_fines": 8671.0,
+    "citation_count": 74,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 57,
+    "plate": "8KFC895",
+    "plate_state": "CA",
+    "total_fines": 8614.0,
+    "citation_count": 87,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 58,
+    "plate": "7CMX843",
+    "plate_state": "CA",
+    "total_fines": 8562.0,
+    "citation_count": 80,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 59,
+    "plate": "9HEE344",
+    "plate_state": "CA",
+    "total_fines": 8560.0,
+    "citation_count": 84,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 60,
+    "plate": "9RYD827",
+    "plate_state": "CA",
+    "total_fines": 8551.0,
+    "citation_count": 82,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 61,
+    "plate": "18680N2",
+    "plate_state": "CA",
+    "total_fines": 8532.0,
+    "citation_count": 79,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 62,
+    "plate": "7XXD629",
+    "plate_state": "CA",
+    "total_fines": 8432.0,
+    "citation_count": 77,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 63,
+    "plate": "5HAW517",
+    "plate_state": "CA",
+    "total_fines": 8412.0,
+    "citation_count": 82,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 64,
+    "plate": "6WYG314",
+    "plate_state": "CA",
+    "total_fines": 8399.0,
+    "citation_count": 79,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 65,
+    "plate": "7EUF333",
+    "plate_state": "CA",
+    "total_fines": 8361.0,
+    "citation_count": 66,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 66,
+    "plate": "8CDC753",
+    "plate_state": "CA",
+    "total_fines": 8298.0,
+    "citation_count": 82,
+    "favorite_violation": "YEL ZONE"
+  },
+  {
+    "rank": 67,
+    "plate": "9JHZ134",
+    "plate_state": "CA",
+    "total_fines": 8290.0,
+    "citation_count": 72,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 68,
+    "plate": "SFG9969",
+    "plate_state": "TX",
+    "total_fines": 8224.0,
+    "citation_count": 80,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 69,
+    "plate": "9BVS268",
+    "plate_state": "CA",
+    "total_fines": 8185.0,
+    "citation_count": 66,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 70,
+    "plate": "53773V3",
+    "plate_state": "CA",
+    "total_fines": 8184.0,
+    "citation_count": 70,
+    "favorite_violation": "DBL PARK"
+  },
+  {
+    "rank": 71,
+    "plate": "5PJX632",
+    "plate_state": "CA",
+    "total_fines": 8087.0,
+    "citation_count": 55,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 72,
+    "plate": "5XXT948",
+    "plate_state": "CA",
+    "total_fines": 7959.0,
+    "citation_count": 68,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 73,
+    "plate": "9DZZ069",
+    "plate_state": "CA",
+    "total_fines": 7915.0,
+    "citation_count": 74,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 74,
+    "plate": "5GKD916",
+    "plate_state": "CA",
+    "total_fines": 7852.0,
+    "citation_count": 71,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 75,
+    "plate": "KQKY31",
+    "plate_state": "FL",
+    "total_fines": 7815.0,
+    "citation_count": 76,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 76,
+    "plate": "06218X3",
+    "plate_state": "CA",
+    "total_fines": 7757.0,
+    "citation_count": 72,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 77,
+    "plate": "7WAC843",
+    "plate_state": "CA",
+    "total_fines": 7711.0,
+    "citation_count": 47,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 78,
+    "plate": "5ZND753",
+    "plate_state": "CA",
+    "total_fines": 7704.0,
+    "citation_count": 75,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 79,
+    "plate": "9KCM101",
+    "plate_state": "CA",
+    "total_fines": 7642.0,
+    "citation_count": 68,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 80,
+    "plate": "70392W1",
+    "plate_state": "CA",
+    "total_fines": 7638.0,
+    "citation_count": 67,
+    "favorite_violation": "DBL PARK"
+  },
+  {
+    "rank": 81,
+    "plate": "53744Y1",
+    "plate_state": "CA",
+    "total_fines": 7610.0,
+    "citation_count": 70,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 82,
+    "plate": "9RVH740",
+    "plate_state": "CA",
+    "total_fines": 7550.0,
+    "citation_count": 77,
+    "favorite_violation": "N/ W/I SPC"
+  },
+  {
+    "rank": 83,
+    "plate": "6BKH366",
+    "plate_state": "CA",
+    "total_fines": 7546.0,
+    "citation_count": 72,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 84,
+    "plate": "9PET497",
+    "plate_state": "CA",
+    "total_fines": 7468.0,
+    "citation_count": 73,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 85,
+    "plate": "9ELG816",
+    "plate_state": "CA",
+    "total_fines": 7456.0,
+    "citation_count": 74,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 86,
+    "plate": "6PZZ257",
+    "plate_state": "CA",
+    "total_fines": 7433.0,
+    "citation_count": 72,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 87,
+    "plate": "5DNY655",
+    "plate_state": "CA",
+    "total_fines": 7413.0,
+    "citation_count": 73,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 88,
+    "plate": "7SFM677",
+    "plate_state": "CA",
+    "total_fines": 7406.0,
+    "citation_count": 71,
+    "favorite_violation": "MTR OUT DT"
+  },
+  {
+    "rank": 89,
+    "plate": "9DSU890",
+    "plate_state": "CA",
+    "total_fines": 7405.0,
+    "citation_count": 74,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 90,
+    "plate": "4PQU019",
+    "plate_state": "CA",
+    "total_fines": 7399.0,
+    "citation_count": 71,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 91,
+    "plate": "9GJN209",
+    "plate_state": "CA",
+    "total_fines": 7390.0,
+    "citation_count": 67,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 92,
+    "plate": "9FMN196",
+    "plate_state": "CA",
+    "total_fines": 7368.0,
+    "citation_count": 69,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 93,
+    "plate": "5ELU906",
+    "plate_state": "CA",
+    "total_fines": 7295.0,
+    "citation_count": 68,
+    "favorite_violation": "PK PHB OTD"
+  },
+  {
+    "rank": 94,
+    "plate": "36429D1",
+    "plate_state": "CA",
+    "total_fines": 7292.0,
+    "citation_count": 62,
+    "favorite_violation": "METER DTN"
+  },
+  {
+    "rank": 95,
+    "plate": "6XGJ284",
+    "plate_state": "CA",
+    "total_fines": 7283.0,
+    "citation_count": 70,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 96,
+    "plate": "5PBC423",
+    "plate_state": "CA",
+    "total_fines": 7194.0,
+    "citation_count": 70,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 97,
+    "plate": "9PPF483",
+    "plate_state": "CA",
+    "total_fines": 7187.0,
+    "citation_count": 69,
+    "favorite_violation": "RED ZONE"
+  },
+  {
+    "rank": 98,
+    "plate": "7JFL756",
+    "plate_state": "CA",
+    "total_fines": 7141.0,
+    "citation_count": 66,
+    "favorite_violation": "STR CLEAN"
+  },
+  {
+    "rank": 99,
+    "plate": "EP19456",
+    "plate_state": "CA",
+    "total_fines": 7120.0,
+    "citation_count": 65,
+    "favorite_violation": "PK STANDS"
+  },
+  {
+    "rank": 100,
+    "plate": "5XUL824",
+    "plate_state": "CA",
+    "total_fines": 7064.0,
+    "citation_count": 58,
+    "favorite_violation": "STR CLEAN"
+  }
+]
