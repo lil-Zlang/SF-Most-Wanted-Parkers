@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import SearchBar from '@/components/SearchBar';
 import LeaderboardTable from '@/components/LeaderboardTable';
-import CitationHeatMap from '@/components/CitationHeatMap';
+import AllCitationsMap from '@/components/AllCitationsMap';
 import { LeaderboardEntry } from '@/types';
 import { fetchLeaderboard } from '@/lib/db';
 
@@ -14,13 +14,14 @@ import { fetchLeaderboard } from '@/lib/db';
  */
 async function getLeaderboardData(): Promise<LeaderboardEntry[]> {
   try {
-    return await fetchLeaderboard(100);
+    return await fetchLeaderboard(30);
   } catch (err) {
     console.error('DB error, falling back to file', err);
     try {
       const filePath = path.join(process.cwd(), 'public', 'data', 'leaderboard.json');
       const fileContents = await fs.readFile(filePath, 'utf8');
-      return JSON.parse(fileContents);
+      const allData = JSON.parse(fileContents);
+      return allData.slice(0, 30); // Only top 30
     } catch (error) {
       console.error('Error loading leaderboard data:', error);
       return [];
@@ -40,7 +41,7 @@ export default async function Home() {
             SF&apos;s Most Wanted Parkers
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            The official leaderboard of San Francisco&apos;s worst parking offenders since 2020 to 2025
+            The official leaderboard of San Francisco&apos;s worst parking offenders in 2025
           </p>
           <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
             <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
@@ -59,15 +60,15 @@ export default async function Home() {
         {/* Search Bar */}
         <SearchBar />
 
-        {/* Citation Heat Map - 2025 Data */}
+        {/* Filtered Citations Map */}
         <div className="mb-12">
-          <CitationHeatMap />
+          <AllCitationsMap />
         </div>
 
         {/* Leaderboard */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-6">
-            Top 100 Offenders
+            Top 30 Offenders
           </h2>
           <LeaderboardTable data={leaderboardData} />
         </div>
@@ -76,7 +77,7 @@ export default async function Home() {
         <div className="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-300">
           <p>
             Data sourced from SFMTA Parking Citations dataset. 
-            Updated with citations from January 1, 2020 to December 31, 2025.
+            Showing 2025 citations only (January 1 - present).
           </p>
         </div>
       </div>

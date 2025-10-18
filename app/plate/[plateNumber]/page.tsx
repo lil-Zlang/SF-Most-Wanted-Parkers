@@ -31,17 +31,47 @@ async function getPlateDetails(plateNumber: string): Promise<PlateDetails | null
   // Try database first
   try {
     const dbResult = await fetchPlateDetails(plateNumber);
-    if (dbResult) return dbResult as PlateDetails;
+    if (dbResult) {
+      // Filter to only show 2025 citations
+      const plateDetails = dbResult as PlateDetails;
+      const citations2025 = plateDetails.all_citations.filter(citation => {
+        if (!citation.date) return false;
+        const citationYear = new Date(citation.date).getFullYear();
+        return citationYear === 2025;
+      });
+      
+      // Return filtered data
+      return {
+        ...plateDetails,
+        all_citations: citations2025,
+        citation_count: citations2025.length,
+        total_fines: citations2025.reduce((sum, c) => sum + (c.fine_amount || 0), 0)
+      };
+    }
   } catch (err) {
     console.error('DB error, falling back to file', err);
   }
 
-  // Fallback to file storage (legacy)
+  // Fallback to file storage (legacy) - also filter 2025
   try {
     const plateFile = path.join(process.cwd(), 'public', 'data', 'plates', `${plateNumber}.json`);
     await fs.access(plateFile);
     const fileContents = await fs.readFile(plateFile, 'utf8');
-    return JSON.parse(fileContents);
+    const plateDetails = JSON.parse(fileContents);
+    
+    // Filter to 2025
+    const citations2025 = plateDetails.all_citations.filter((citation: any) => {
+      if (!citation.date) return false;
+      const citationYear = new Date(citation.date).getFullYear();
+      return citationYear === 2025;
+    });
+    
+    return {
+      ...plateDetails,
+      all_citations: citations2025,
+      citation_count: citations2025.length,
+      total_fines: citations2025.reduce((sum: number, c: any) => sum + (c.fine_amount || 0), 0)
+    };
   } catch {
     return null;
   }
@@ -94,7 +124,7 @@ export default async function PlatePage({ params }: PageProps) {
           <h1 className="text-5xl font-bold text-gray-900 mb-2">
             <span className="font-mono">{plateNumber}</span>
           </h1>
-          <p className="text-xl text-gray-600">Parking Violation Rap Sheet</p>
+          <p className="text-xl text-gray-600">2025 Parking Violations</p>
         </div>
 
         {/* Key Stats */}
@@ -133,10 +163,10 @@ export default async function PlatePage({ params }: PageProps) {
         {/* Map Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Ticket Locations
+            Ticket Locations (2025)
           </h2>
           <p className="text-gray-600 mb-4">
-            Map showing all {plateDetails.all_citations.length} parking violations for this plate
+            Map showing all {plateDetails.all_citations.length} parking violations for this plate in 2025
           </p>
           <TicketMap citations={plateDetails.all_citations} />
         </div>
@@ -144,7 +174,7 @@ export default async function PlatePage({ params }: PageProps) {
         {/* Recent Citations */}
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            All Citations
+            All Citations (2025)
           </h2>
           <div className="overflow-x-auto">
             <table className="min-w-full">
