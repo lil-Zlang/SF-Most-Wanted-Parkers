@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { fetchAllHotspots } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * API route to fetch citation hotspots from database
  * GET /api/hotspots
