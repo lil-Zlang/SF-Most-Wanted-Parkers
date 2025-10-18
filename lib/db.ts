@@ -18,7 +18,25 @@ export async function fetchLeaderboard(limit = 30) {
 
 export async function fetchPlateDetails(plate: string) {
   const { rows } = await sql`
-    SELECT total_fines, citation_count, plate_state, favorite_violation, citations AS all_citations
+    SELECT 
+      plate,
+      plate_state,
+      favorite_violation,
+      (
+        SELECT jsonb_agg(citation)
+        FROM jsonb_array_elements(citations) AS citation
+        WHERE (citation->>'date')::timestamp >= '2025-01-01'::timestamp
+      ) AS all_citations,
+      (
+        SELECT COUNT(*)::integer
+        FROM jsonb_array_elements(citations) AS citation
+        WHERE (citation->>'date')::timestamp >= '2025-01-01'::timestamp
+      ) AS citation_count,
+      (
+        SELECT COALESCE(SUM((citation->>'fine_amount')::numeric), 0)
+        FROM jsonb_array_elements(citations) AS citation
+        WHERE (citation->>'date')::timestamp >= '2025-01-01'::timestamp
+      ) AS total_fines
     FROM plate_details
     WHERE plate = ${plate}
     LIMIT 1;
@@ -27,7 +45,17 @@ export async function fetchPlateDetails(plate: string) {
 }
 
 export async function fetchPlateCitations(plate: string) {
-  const { rows } = await sql`SELECT citations FROM plate_details WHERE plate = ${plate} LIMIT 1;`;
+  const { rows } = await sql`
+    SELECT 
+      (
+        SELECT jsonb_agg(citation)
+        FROM jsonb_array_elements(citations) AS citation
+        WHERE (citation->>'date')::timestamp >= '2025-01-01'::timestamp
+      ) AS citations
+    FROM plate_details 
+    WHERE plate = ${plate} 
+    LIMIT 1;
+  `;
   return rows[0]?.citations || null;
 }
 

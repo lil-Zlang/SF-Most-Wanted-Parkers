@@ -44,26 +44,32 @@ export async function GET(request: Request) {
       }
     });
 
-    // Get all citations first, then filter in JavaScript for simplicity
+    // Get all citations from 2025 onwards, then filter in JavaScript for simplicity
     const { rows } = await sql`
       SELECT 
         jsonb_array_elements(citations) as citation
       FROM plate_details
       WHERE citations IS NOT NULL
-      ORDER BY (jsonb_array_elements(citations)->>'fine_amount')::numeric DESC,
-               (jsonb_array_elements(citations)->>'date') DESC
+        AND EXISTS (
+          SELECT 1 
+          FROM jsonb_array_elements(citations) AS cit
+          WHERE (cit->>'date')::timestamp >= '2025-01-01'::timestamp
+        )
     `;
     
-    // Extract citation data and filter out invalid locations
+    // Extract citation data and filter out invalid locations + enforce 2025+ dates
     let allCitations = rows
       .map(row => row.citation)
-      .filter(citation => 
-        citation && 
-        citation.location && 
-        citation.location.trim() !== '' &&
-        citation.location !== 'None' &&
-        citation.location !== 'NULL'
-      )
+      .filter(citation => {
+        if (!citation || !citation.location || citation.location.trim() === '' || 
+            citation.location === 'None' || citation.location === 'NULL') {
+          return false;
+        }
+        // Enforce date filter: only citations from 2025-01-01 onwards
+        if (!citation.date) return false;
+        const citationDate = new Date(citation.date);
+        return citationDate >= new Date('2025-01-01T00:00:00');
+      })
       .map(citation => ({
         location: citation.location.trim(),
         violation: citation.violation || 'Unknown',

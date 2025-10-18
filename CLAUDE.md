@@ -59,7 +59,11 @@ This imports data from `public/data/leaderboard.json` and individual plate files
 
 **Page Architecture**: The app uses Next.js 14 App Router with server components for data fetching. The main page (`app/page.tsx`) displays the leaderboard and heatmap using static generation at build time. Dynamic routes (`app/plate/[plateNumber]/page.tsx`) handle individual plate detail pages with on-demand server rendering.
 
-**Data Filtering**: All pages currently filter to show only 2025 citations. When working with citation data, date filtering logic is applied in both database queries and fallback JSON processing.
+**Data Filtering**: All pages filter to show only citations from January 1, 2025 onwards. The date filtering is implemented at multiple layers for consistency and performance:
+  - **Database Layer** (`lib/db.ts`): SQL queries use `WHERE (citation->>'date')::timestamp >= '2025-01-01'::timestamp` to filter JSONB citation arrays
+  - **API Layer** (`app/api/citations/route.ts`): REST endpoints enforce date filtering with JavaScript Date comparison
+  - **Page Layer** (`app/plate/[plateNumber]/page.tsx`): Additional safety filters ensure no pre-2025 data is displayed
+  - **Fallback JSON**: When database is unavailable, JSON files are filtered using the same date logic
 
 **Client-Side Maps**: The Leaflet map components (`TicketMap`, `CitationHeatMap`) are dynamically imported with `ssr: false` because Leaflet requires browser APIs. Any new map features must use this pattern.
 

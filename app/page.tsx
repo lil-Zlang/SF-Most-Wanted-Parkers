@@ -47,13 +47,6 @@ export default async function Home() {
             <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
               {leaderboardData.length} plates tracked
             </span>
-            <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full">
-              $
-              {leaderboardData
-                .reduce((sum, entry) => sum + entry.total_fines, 0)
-                .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              {' '}in fines
-            </span>
           </div>
         </div>
 

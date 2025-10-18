@@ -383,14 +383,14 @@ export default function AllCitationsMap() {
           </h3>
           <div className="grid grid-cols-6 md:grid-cols-12 gap-2 mb-3">
             {[
-              { value: '01', label: 'Jan', available: false },
-              { value: '02', label: 'Feb', available: false },
-              { value: '03', label: 'Mar', available: false },
-              { value: '04', label: 'Apr', available: false },
-              { value: '05', label: 'May', available: false },
-              { value: '06', label: 'Jun', available: false },
-              { value: '07', label: 'Jul', available: false },
-              { value: '08', label: 'Aug', available: false },
+              { value: '01', label: 'Jan', available: true },
+              { value: '02', label: 'Feb', available: true },
+              { value: '03', label: 'Mar', available: true },
+              { value: '04', label: 'Apr', available: true },
+              { value: '05', label: 'May', available: true },
+              { value: '06', label: 'Jun', available: true },
+              { value: '07', label: 'Jul', available: true },
+              { value: '08', label: 'Aug', available: true },
               { value: '09', label: 'Sep', available: true },
               { value: '10', label: 'Oct', available: true },
               { value: '11', label: 'Nov', available: false },

@@ -12,6 +12,9 @@ export interface LeaderboardEntry {
 export interface Citation {
   date: string | null;
   violation: string;
+  fine_amount?: number;
+  citation_number?: string;
+  location?: string;
   latitude?: number;
   longitude?: number;
 }

@@ -28,16 +28,18 @@ interface PageProps {
  * individual plate files for better performance and memory efficiency.
  */
 async function getPlateDetails(plateNumber: string): Promise<PlateDetails | null> {
-  // Try database first
+  // Try database first (already filters to 2025+ in the query)
   try {
     const dbResult = await fetchPlateDetails(plateNumber);
     if (dbResult) {
-      // Filter to only show 2025 citations
+      // Database query already filters to 2025-01-01 onwards
       const plateDetails = dbResult as PlateDetails;
-      const citations2025 = plateDetails.all_citations.filter(citation => {
+      
+      // Additional safety filter in case database doesn't have citations array
+      const citations2025 = (plateDetails.all_citations || []).filter(citation => {
         if (!citation.date) return false;
-        const citationYear = new Date(citation.date).getFullYear();
-        return citationYear === 2025;
+        const citationDate = new Date(citation.date);
+        return citationDate >= new Date('2025-01-01T00:00:00');
       });
       
       // Return filtered data
@@ -52,18 +54,18 @@ async function getPlateDetails(plateNumber: string): Promise<PlateDetails | null
     console.error('DB error, falling back to file', err);
   }
 
-  // Fallback to file storage (legacy) - also filter 2025
+  // Fallback to file storage (legacy) - also filter to 2025-01-01 onwards
   try {
     const plateFile = path.join(process.cwd(), 'public', 'data', 'plates', `${plateNumber}.json`);
     await fs.access(plateFile);
     const fileContents = await fs.readFile(plateFile, 'utf8');
     const plateDetails = JSON.parse(fileContents);
     
-    // Filter to 2025
+    // Filter to citations from 2025-01-01 onwards
     const citations2025 = plateDetails.all_citations.filter((citation: any) => {
       if (!citation.date) return false;
-      const citationYear = new Date(citation.date).getFullYear();
-      return citationYear === 2025;
+      const citationDate = new Date(citation.date);
+      return citationDate >= new Date('2025-01-01T00:00:00');
     });
     
     return {
