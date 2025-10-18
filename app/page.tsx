@@ -33,18 +33,18 @@ export default async function Home() {
   const leaderboardData = await getLeaderboardData();
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-4">
             SF&apos;s Most Wanted Parkers
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
             The official leaderboard of San Francisco&apos;s worst parking offenders in 2025
           </p>
-          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
               {leaderboardData.length} plates tracked
             </span>
           </div>
@@ -60,14 +60,14 @@ export default async function Home() {
 
         {/* Leaderboard */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">
+          <h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">
             Top 30 Offenders
           </h2>
           <LeaderboardTable data={leaderboardData} />
         </div>
 
         {/* Footer */}
-        <div className="text-center text-gray-500 text-sm mt-12 pt-8 border-t border-gray-300">
+        <div className="text-center text-gray-500 dark:text-gray-400 text-sm mt-12 pt-8 border-t border-gray-300 dark:border-gray-600">
           <p>
             Data sourced from SFMTA Parking Citations dataset. 
             Showing 2025 citations only (January 1 - present).

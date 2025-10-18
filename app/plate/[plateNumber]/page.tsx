@@ -113,29 +113,29 @@ export default async function PlatePage({ params }: PageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-12 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
           <Link
             href="/"
-            className="text-blue-600 hover:text-blue-800 mb-4 inline-block"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4 inline-block"
           >
             ← Back to Leaderboard
           </Link>
-          <h1 className="text-5xl font-bold text-gray-900 mb-2">
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
             <span className="font-mono">{plateNumber}</span>
           </h1>
-          <p className="text-xl text-gray-600">2025 Parking Violations</p>
+          <p className="text-xl text-gray-600 dark:text-gray-300">2025 Parking Violations</p>
         </div>
 
         {/* Key Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-500">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-red-500">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
               Total Fines Owed
             </h3>
-            <p className="text-4xl font-bold text-red-600">
+            <p className="text-4xl font-bold text-red-600 dark:text-red-400">
               ${plateDetails.total_fines.toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -143,57 +143,57 @@ export default async function PlatePage({ params }: PageProps) {
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-orange-500">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
               Total Citations
             </h3>
-            <p className="text-4xl font-bold text-orange-600">
+            <p className="text-4xl font-bold text-orange-600 dark:text-orange-400">
               {plateDetails.citation_count.toLocaleString()}
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase mb-2">
               Favorite Violation
             </h3>
-            <p className="text-lg font-semibold text-blue-600 leading-tight">
+            <p className="text-lg font-semibold text-blue-600 dark:text-blue-400 leading-tight">
               {plateDetails.favorite_violation}
             </p>
           </div>
         </div>
 
         {/* Map Section */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
             Ticket Locations (2025)
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             Map showing all {plateDetails.all_citations.length} parking violations for this plate in 2025
           </p>
           <TicketMap citations={plateDetails.all_citations} />
         </div>
 
         {/* Recent Citations */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
             All Citations (2025)
           </h2>
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-gray-100">
+              <thead className="bg-gray-100 dark:bg-gray-700">
                 <tr>
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Date
                   </th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Violation
                   </th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700">
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Location
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                 {plateDetails.all_citations
                   .sort((a, b) => {
                     if (!a.date) return 1;
@@ -201,8 +201,8 @@ export default async function PlatePage({ params }: PageProps) {
                     return new Date(b.date).getTime() - new Date(a.date).getTime();
                   })
                   .map((citation, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm text-gray-700">
+                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
                         {citation.date
                           ? new Date(citation.date).toLocaleDateString('en-US', {
                               year: 'numeric',
@@ -213,10 +213,10 @@ export default async function PlatePage({ params }: PageProps) {
                             })
                           : 'N/A'}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-700">
+                      <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">
                         {citation.violation}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                         {citation.latitude && citation.longitude
                           ? `${citation.latitude.toFixed(4)}, ${citation.longitude.toFixed(4)}`
                           : 'No location data'}
