@@ -1,16 +1,27 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix for default marker icon
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 /**
- * Individual citation data from database
+ * Citation hotspot data from database
  */
-interface Citation {
+interface Hotspot {
   location: string;
-  violation: string;
-  fine_amount: number;
-  citation_number: string;
-  date: string;
+  citation_count: number;
+  total_fines: number;
+  top_violation: string;
+  violation_breakdown: any;
   latitude?: number;
   longitude?: number;
 }
@@ -24,10 +35,33 @@ interface FilterState {
 }
 
 /**
+ * Component to fit map bounds to markers
+ */
+function FitBounds({ hotspots }: { hotspots: Hotspot[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const validHotspots = hotspots.filter(
+      h => h.latitude !== undefined && h.longitude !== undefined &&
+      !isNaN(h.latitude) && !isNaN(h.longitude)
+    );
+
+    if (validHotspots.length > 0) {
+      const bounds = L.latLngBounds(
+        validHotspots.map(h => [h.latitude!, h.longitude!] as [number, number])
+      );
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [hotspots, map]);
+
+  return null;
+}
+
+/**
  * AllCitationsMap Component
- * 
+ *
  * Displays filtered individual citations from the database on an interactive map.
- * Users can filter by fine amount ranges and months.
+ * Uses Leaflet + OpenStreetMap (100% free!) with Nominatim geocoding.
  */
 export default function AllCitationsMap() {
   const [citations, setCitations] = useState<Citation[]>([]);
@@ -38,17 +72,22 @@ export default function AllCitationsMap() {
     fineRanges: [],
     months: ['10'] // Default to October
   });
-  
-  const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+  const [citationsWithoutCoords, setCitationsWithoutCoords] = useState<Citation[]>([]);
+
   const geocodeCacheRef = useRef<Map<string, {lat: number, lng: number}>>(new Map());
-  const streetViewServiceRef = useRef<any>(null);
+
+  // Only render map on client side
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load default citations (October data) on mount
   useEffect(() => {
-    loadCitations();
-  }, []);
+    if (isMounted) {
+      loadCitations();
+    }
+  }, [isMounted]);
 
   // Load citations based on current filters
   const loadCitations = async (customFilters?: FilterState) => {
@@ -66,8 +105,24 @@ export default function AllCitationsMap() {
       const response = await fetch(`/api/citations?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
-        setCitations(data.citations);
-        console.log(`Loaded ${data.total} citations with filters:`, data.filters);
+        const citationsData = data.citations;
+
+        // Separate citations with and without coordinates
+        const withCoords = citationsData.filter(
+          (c: Citation) => c.latitude && c.longitude &&
+          !isNaN(c.latitude) && !isNaN(c.longitude)
+        );
+        const withoutCoords = citationsData.filter(
+          (c: Citation) => !c.latitude || !c.longitude ||
+          isNaN(c.latitude) || isNaN(c.longitude)
+        );
+
+        setCitations(withCoords);
+        setCitationsWithoutCoords(withoutCoords);
+
+        if (withCoords.length === 0 && withoutCoords.length > 0) {
+          console.log(`Found ${withoutCoords.length} citations without coordinates. You can geocode a sample using the button below.`);
+        }
       } else {
         setError('Failed to load citations from database');
       }
@@ -79,6 +134,105 @@ export default function AllCitationsMap() {
     }
   };
 
+  /**
+   * Geocode a sample of citations using Nominatim
+   * (Limited to 50 to avoid long wait times - takes ~50 seconds)
+   */
+  const geocodeSample = async () => {
+    if (citationsWithoutCoords.length === 0) {
+      alert('All citations already have coordinates!');
+      return;
+    }
+
+    const sampleSize = Math.min(50, citationsWithoutCoords.length);
+    const confirmed = confirm(
+      `This will geocode ${sampleSize} citations using Nominatim (1 req/sec).\n\n` +
+      `Estimated time: ~${sampleSize} seconds.\n\n` +
+      `Continue?`
+    );
+
+    if (!confirmed) return;
+
+    setIsGeocoding(true);
+    const sample = citationsWithoutCoords.slice(0, sampleSize);
+    const geocodedCitations: Citation[] = [...citations]; // Keep existing
+
+    let successCount = 0;
+
+    for (let i = 0; i < sample.length; i++) {
+      const citation = sample[i];
+      try {
+        // Check cache first
+        const cacheKey = citation.location;
+        let coords: {lat: number, lng: number} | null = null;
+
+        if (geocodeCacheRef.current.has(cacheKey)) {
+          coords = geocodeCacheRef.current.get(cacheKey)!;
+        } else {
+          // Geocode using Nominatim
+          const address = `${citation.location}, San Francisco, CA`;
+          coords = await geocodeWithNominatim(address);
+
+          if (coords) {
+            geocodeCacheRef.current.set(cacheKey, coords);
+          }
+
+          // Respect Nominatim rate limit (1 request per second)
+          await new Promise(resolve => setTimeout(resolve, 1100));
+        }
+
+        if (coords) {
+          geocodedCitations.push({
+            ...citation,
+            latitude: coords.lat,
+            longitude: coords.lng
+          });
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Failed to geocode ${citation.location}:`, err);
+      }
+    }
+
+    setCitations(geocodedCitations);
+    setCitationsWithoutCoords(citationsWithoutCoords.slice(sampleSize));
+    setIsGeocoding(false);
+
+    alert(`Geocoded ${successCount} out of ${sampleSize} citations!`);
+  };
+
+  /**
+   * Geocode address using Nominatim (free, no API key required)
+   */
+  const geocodeWithNominatim = async (address: string): Promise<{lat: number, lng: number} | null> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?` +
+        `q=${encodeURIComponent(address)}` +
+        `&format=json&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'SF-Most-Wanted-Parkers' // Nominatim requires User-Agent
+          }
+        }
+      );
+
+      if (response.ok) {
+        const results = await response.json();
+        if (results && results.length > 0) {
+          return {
+            lat: parseFloat(results[0].lat),
+            lng: parseFloat(results[0].lon)
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Nominatim geocoding error:', error);
+    }
+
+    return null;
+  };
+
   // Apply filters and reload citations
   const applyFilters = () => {
     loadCitations(filters);
@@ -88,7 +242,7 @@ export default function AllCitationsMap() {
   const handleFineRangeChange = (range: string, checked: boolean) => {
     setFilters(prev => ({
       ...prev,
-      fineRanges: checked 
+      fineRanges: checked
         ? [...prev.fineRanges, range]
         : prev.fineRanges.filter(r => r !== range)
     }));
@@ -104,306 +258,6 @@ export default function AllCitationsMap() {
     }));
   };
 
-  // Initialize Google Maps
-  useEffect(() => {
-    if (isLoading || !mapRef.current) return;
-
-    const initMap = async () => {
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-        
-        if (!apiKey) {
-          setError('Google Maps API key not found');
-          return;
-        }
-
-        // Load Google Maps
-        if (!window.google) {
-          const script = document.createElement('script');
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=visualization`;
-          script.async = true;
-          script.defer = true;
-          await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
-        }
-
-        // Initialize Street View service
-        streetViewServiceRef.current = new window.google.maps.StreetViewService();
-
-        // Create map
-        const map = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 37.7749, lng: -122.4194 }, // San Francisco
-          zoom: 12,
-          mapTypeControl: true,
-          streetViewControl: false,
-          fullscreenControl: true,
-        });
-
-        googleMapRef.current = map;
-
-      } catch (err) {
-        console.error('Error initializing map:', err);
-        setError('Failed to initialize Google Maps');
-      }
-    };
-
-    initMap();
-
-    return () => {
-      // Cleanup markers
-      markersRef.current.forEach(marker => marker.setMap(null));
-      markersRef.current = [];
-    };
-  }, [isLoading]);
-
-  // Display citations on map when citations change
-  useEffect(() => {
-    if (citations.length === 0 || !googleMapRef.current) return;
-
-    displayCitationsOnMap(citations);
-  }, [citations]);
-
-  /**
-   * Display all citations on the map with instant geocoding
-   */
-  const displayCitationsOnMap = async (citationData: Citation[]) => {
-    if (!googleMapRef.current) return;
-
-    setIsGeocoding(true);
-    
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-
-    const map = googleMapRef.current;
-    const geocoder = new window.google.maps.Geocoder();
-    const bounds = new window.google.maps.LatLngBounds();
-
-    console.log(`Displaying ${citationData.length} citations on map...`);
-
-    // Process citations in parallel batches
-    const batchSize = 50;
-    const batches = [];
-    
-    for (let i = 0; i < citationData.length; i += batchSize) {
-      const batch = citationData.slice(i, i + batchSize);
-      batches.push(batch);
-    }
-
-    // Process all batches in parallel
-    const allPromises = batches.map(async (batch) => {
-      const batchPromises = batch.map(async (citation) => {
-        try {
-          let coords: {lat: number, lng: number} | null = null;
-          
-          // Check cache first
-          const cacheKey = citation.location;
-          if (geocodeCacheRef.current.has(cacheKey)) {
-            coords = geocodeCacheRef.current.get(cacheKey)!;
-          } else {
-            // Geocode the address
-            const address = `${citation.location}, San Francisco, CA`;
-            coords = await geocodeAddress(geocoder, address);
-            if (coords) {
-              geocodeCacheRef.current.set(cacheKey, coords);
-            }
-          }
-          
-          if (coords) {
-            addCitationMarker(map, coords, citation, bounds);
-          }
-        } catch (err) {
-          console.warn(`Failed to process citation: ${citation.location}`, err);
-        }
-      });
-
-      await Promise.all(batchPromises);
-    });
-
-    await Promise.all(allPromises);
-
-    // Fit map to show all markers
-    if (!bounds.isEmpty()) {
-      map.fitBounds(bounds);
-    }
-
-    setIsGeocoding(false);
-    console.log(`Successfully displayed ${citationData.length} citations on map`);
-  };
-
-  /**
-   * Geocode a single address
-   */
-  const geocodeAddress = (geocoder: any, address: string): Promise<{lat: number, lng: number} | null> => {
-    return new Promise((resolve) => {
-      geocoder.geocode({ address }, (results: any[], status: string) => {
-        if (status === 'OK' && results && results.length > 0) {
-          const location = results[0].geometry.location;
-          resolve({ lat: location.lat(), lng: location.lng() });
-        } else {
-          resolve(null);
-        }
-      });
-    });
-  };
-
-  /**
-   * Add a citation marker to the map
-   */
-  const addCitationMarker = (
-    map: any,
-    coords: {lat: number, lng: number},
-    citation: Citation,
-    bounds: any
-  ) => {
-    const position = new window.google.maps.LatLng(coords.lat, coords.lng);
-    bounds.extend(position);
-
-    // Create marker with color based on fine amount
-    const color = getMarkerColor(citation.fine_amount);
-    const size = Math.min(6 + Math.log(citation.fine_amount + 1), 12);
-
-    const marker = new window.google.maps.Marker({
-      position: position,
-      map: map,
-      title: `${citation.location} - ${citation.violation}`,
-      icon: {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        fillColor: color,
-        fillOpacity: 0.8,
-        strokeColor: '#ffffff',
-        strokeWeight: 1,
-        scale: size,
-      },
-    });
-
-    // Create info window with Street View
-    const infoWindow = new window.google.maps.InfoWindow({
-      content: `
-        <div style="padding: 8px; min-width: 300px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">${citation.location}</h3>
-          <div style="margin-bottom: 8px;">
-            <div><strong>Violation:</strong> ${citation.violation}</div>
-            <div><strong>Fine:</strong> $${citation.fine_amount.toFixed(2)}</div>
-            <div><strong>Citation #:</strong> ${citation.citation_number}</div>
-            <div><strong>Date:</strong> ${new Date(citation.date).toLocaleDateString()}</div>
-          </div>
-          <div id="streetview-${citation.citation_number}" style="width: 280px; height: 150px; margin: 8px 0; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb;">
-            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f3f4f6; color: #6b7280;">
-              <div style="text-align: center;">
-                <div style="margin-bottom: 4px;">🔍</div>
-                <div style="font-size: 12px;">Loading Street View...</div>
-              </div>
-            </div>
-          </div>
-          <div style="text-align: center; margin-top: 8px;">
-            <a href="https://www.google.com/maps/@${coords.lat},${coords.lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s${coords.lat},${coords.lng}!2e0!7i16384!8i8192" 
-               target="_blank" 
-               style="display: inline-block; padding: 6px 12px; background: #3b82f6; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 500;">
-              Open in Google Maps
-            </a>
-          </div>
-        </div>
-      `
-    });
-
-    marker.addListener('click', () => {
-      infoWindow.open(map, marker);
-      
-      // Load Street View after info window opens
-      setTimeout(() => {
-        loadStreetView(citation.citation_number, coords);
-      }, 100);
-    });
-
-    markersRef.current.push(marker);
-  };
-
-  /**
-   * Load Street View for a specific location
-   */
-  const loadStreetView = (citationNumber: string, coords: {lat: number, lng: number}) => {
-    if (!streetViewServiceRef.current) return;
-
-    const streetViewElement = document.getElementById(`streetview-${citationNumber}`);
-    if (!streetViewElement) return;
-
-    // Check if Street View is available at this location
-    streetViewServiceRef.current.getPanorama({
-      location: coords,
-      radius: 50
-    }, (data: any, status: string) => {
-      if (status === 'OK') {
-        // Create Street View panorama
-        const panorama = new window.google.maps.StreetViewPanorama(streetViewElement, {
-          position: coords,
-          pov: {
-            heading: 0,
-            pitch: 0
-          },
-          zoom: 1,
-          disableDefaultUI: true,
-          clickToGo: false,
-          scrollwheel: false,
-          panControl: false,
-          linksControl: false,
-          addressControl: false,
-          fullscreenControl: false
-        });
-
-        // Add click handler to open in Google Maps
-        panorama.addListener('click', () => {
-          window.open(`https://www.google.com/maps/@${coords.lat},${coords.lng},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s${coords.lat},${coords.lng}!2e0!7i16384!8i8192`, '_blank');
-        });
-
-        // Add a subtle overlay to indicate it's clickable
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0,0,0,0.1);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 12px;
-          font-weight: 500;
-          pointer-events: none;
-          opacity: 0;
-          transition: opacity 0.3s;
-        `;
-        overlay.textContent = 'Click to open in Google Maps';
-        streetViewElement.style.position = 'relative';
-        streetViewElement.appendChild(overlay);
-
-        // Show overlay on hover
-        streetViewElement.addEventListener('mouseenter', () => {
-          overlay.style.opacity = '1';
-        });
-        streetViewElement.addEventListener('mouseleave', () => {
-          overlay.style.opacity = '0';
-        });
-
-      } else {
-        // No Street View available
-        streetViewElement.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f3f4f6; color: #6b7280;">
-            <div style="text-align: center;">
-              <div style="margin-bottom: 4px;">🚫</div>
-              <div style="font-size: 12px;">No Street View available</div>
-            </div>
-          </div>
-        `;
-      }
-    });
-  };
-
   /**
    * Get marker color based on fine amount
    */
@@ -415,23 +269,28 @@ export default function AllCitationsMap() {
     return '#84cc16'; // lime-500
   };
 
-  if (isLoading) {
+  /**
+   * Get marker size based on fine amount
+   */
+  const getMarkerSize = (fineAmount: number): number => {
+    return Math.min(6 + Math.log(fineAmount + 1), 12);
+  };
+
+  // Filter citations with valid coordinates
+  const validCitations = citations.filter(
+    (citation) =>
+      citation.latitude !== undefined &&
+      citation.longitude !== undefined &&
+      !isNaN(citation.latitude) &&
+      !isNaN(citation.longitude)
+  );
+
+  if (isLoading && !isMounted) {
     return (
       <div className="w-full h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading citations from database...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full h-[600px] bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center border-2 border-red-200 dark:border-red-800">
-        <div className="text-center p-6">
-          <h3 className="text-xl font-bold text-red-800 dark:text-red-400 mb-2">Error Loading Map</h3>
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading map...</p>
         </div>
       </div>
     );
@@ -449,7 +308,7 @@ export default function AllCitationsMap() {
           </div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Filter Citations</h2>
         </div>
-        
+
         {/* Fine Range Checkboxes */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
@@ -465,8 +324,8 @@ export default function AllCitationsMap() {
               { value: 'under100', label: 'Under $100', color: 'bg-lime-100 border-lime-300 text-lime-800' }
             ].map(range => (
               <label key={range.value} className={`flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                filters.fineRanges.includes(range.value) 
-                  ? `${range.color} border-opacity-100 shadow-md` 
+                filters.fineRanges.includes(range.value)
+                  ? `${range.color} border-opacity-100 shadow-md`
                   : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
               }`}>
                 <input
@@ -538,7 +397,7 @@ export default function AllCitationsMap() {
               {isGeocoding ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Loading...
+                  Geocoding...
                 </>
               ) : (
                 <>
@@ -549,7 +408,7 @@ export default function AllCitationsMap() {
                 </>
               )}
             </button>
-            
+
             <button
               onClick={() => {
                 setFilters({ fineRanges: [], months: [] });
@@ -562,11 +421,27 @@ export default function AllCitationsMap() {
               </svg>
               Clear All
             </button>
+
+            {/* Geocode Sample Button - only show if there are citations without coords */}
+            {citationsWithoutCoords.length > 0 && (
+              <button
+                onClick={geocodeSample}
+                disabled={isGeocoding}
+                className="px-4 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                title={`Geocode ${Math.min(50, citationsWithoutCoords.length)} citations`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Geocode Sample ({Math.min(50, citationsWithoutCoords.length)})
+              </button>
+            )}
           </div>
 
           {/* Results Count */}
           <div className="text-right">
-            <div className="text-lg font-bold text-gray-800 dark:text-white">{citations.length}</div>
+            <div className="text-lg font-bold text-gray-800 dark:text-white">{validCitations.length}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
               {filters.fineRanges.length > 0 || filters.months.length > 0 ? 'Filtered citations' : 'Total citations'}
             </div>
@@ -581,19 +456,99 @@ export default function AllCitationsMap() {
           {isGeocoding && (
             <div className="flex items-center gap-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">Geocoding addresses...</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Geocoding addresses with Nominatim...</span>
             </div>
           )}
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          {citations.length > 0 
-            ? `Displaying ${citations.length} citations on the map. Click markers for details.`
-            : 'No citations match the current filters. Try adjusting your selection.'
-          }
+          {validCitations.length > 0 ? (
+            <>
+              Displaying <strong>{validCitations.length} citations</strong> on the map. Click markers for details.
+              {citationsWithoutCoords.length > 0 && (
+                <span className="ml-2 text-amber-600 dark:text-amber-400">
+                  ({citationsWithoutCoords.length} more without GPS coordinates - click "Geocode Sample" to add them)
+                </span>
+              )}
+            </>
+          ) : citationsWithoutCoords.length > 0 ? (
+            <span className="text-amber-600 dark:text-amber-400">
+              No citations with GPS coordinates found. Click "Geocode Sample" to geocode {Math.min(50, citationsWithoutCoords.length)} addresses using Nominatim (free!).
+            </span>
+          ) : (
+            'No citations match the current filters. Try adjusting your selection.'
+          )}
         </p>
       </div>
-      
-      <div ref={mapRef} className="w-full h-[600px] rounded-lg shadow-lg"></div>
+
+      {isMounted && validCitations.length > 0 ? (
+        <div className="w-full h-[600px] rounded-lg shadow-lg overflow-hidden border border-gray-300">
+          <MapContainer
+            center={[37.7749, -122.4194]}
+            zoom={12}
+            scrollWheelZoom={true}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+
+            <FitBounds citations={validCitations} />
+
+            {validCitations.map((citation, index) => {
+              const color = getMarkerColor(citation.fine_amount);
+              const size = getMarkerSize(citation.fine_amount);
+
+              return (
+                <CircleMarker
+                  key={`citation-${index}-${citation.citation_number}`}
+                  center={[citation.latitude!, citation.longitude!]}
+                  radius={size}
+                  pathOptions={{
+                    fillColor: color,
+                    fillOpacity: 0.8,
+                    color: '#ffffff',
+                    weight: 1,
+                  }}
+                >
+                  <Popup>
+                    <div style={{ padding: '10px', minWidth: '240px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+                      <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#1f2937' }}>
+                        {citation.location}
+                      </h3>
+                      <div style={{ fontSize: '13px', color: '#4b5563', lineHeight: '1.6' }}>
+                        <div style={{ marginBottom: '6px' }}>
+                          <strong>Violation:</strong> {citation.violation}
+                        </div>
+                        <div style={{ marginBottom: '6px' }}>
+                          <strong>Fine:</strong> <span style={{ color: '#dc2626', fontWeight: 'bold' }}>${citation.fine_amount.toFixed(2)}</span>
+                        </div>
+                        <div style={{ marginBottom: '6px' }}>
+                          <strong>Citation #:</strong> {citation.citation_number}
+                        </div>
+                        <div>
+                          <strong>Date:</strong> {new Date(citation.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
+          </MapContainer>
+        </div>
+      ) : isMounted && validCitations.length === 0 && !isGeocoding ? (
+        <div className="w-full h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center border-2 border-gray-300 dark:border-gray-600">
+          <div className="text-center p-6">
+            <p className="text-gray-700 dark:text-gray-300 font-semibold text-lg mb-2">No citations to display</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              {citations.length > 0
+                ? 'Citations are being geocoded. This may take a few moments...'
+                : 'Try adjusting your filters or loading data.'}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {/* Legend */}
       <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -622,6 +577,9 @@ export default function AllCitationsMap() {
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
           💡 Marker size also indicates fine amount. Larger markers = higher fines.
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          🌍 Powered by OpenStreetMap & Nominatim (100% free!)
         </p>
       </div>
     </div>

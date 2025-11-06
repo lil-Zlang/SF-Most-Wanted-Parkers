@@ -38,16 +38,16 @@ const MapView = dynamic(() => import('./MapView'), {
 
 /**
  * NeighborhoodHeatMap Component
- * 
- * Displays an interactive Google Maps visualization showing the most fined
+ *
+ * Displays an interactive Leaflet/OpenStreetMap visualization showing the most fined
  * neighborhoods in San Francisco. Users can zoom in to see street-level details.
- * 
+ *
  * Features:
- * - Google Maps integration with superior mapping data
+ * - Leaflet + OpenStreetMap integration (100% free!)
  * - Interactive neighborhood markers
  * - Heat map visualization based on citation density
  * - Zoom functionality to show street-level details (zoom >= 15)
- * - Info windows with detailed statistics
+ * - Popups with detailed statistics
  * - Responsive design
  */
 export default function NeighborhoodHeatMap() {
@@ -98,15 +98,15 @@ export default function NeighborhoodHeatMap() {
           <h2 className="text-3xl font-bold text-gray-800">
             Most Fined Neighborhoods
           </h2>
-          <span className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-full flex items-center gap-1">
+          <span className="px-3 py-1 bg-green-600 text-white text-xs font-medium rounded-full flex items-center gap-1">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
             </svg>
-            Google Maps
+            100% Free
           </span>
         </div>
         <p className="text-gray-600">
-          Powered by Google Maps. Explore parking citation hotspots across San Francisco. 
+          Powered by OpenStreetMap & Leaflet (100% free!). Explore parking citation hotspots across San Francisco.
           <strong>Interactive zoom levels:</strong> Neighborhoods → Mixed view → Street details
         </p>
       </div>

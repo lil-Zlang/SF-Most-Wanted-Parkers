@@ -424,9 +424,9 @@ class ParkingDataProcessor:
     def generate_heatmap_data(self):
         """
         Generate street-level heat map data for visualization.
-        
+
         Strategy: Use citation_location (street address) to aggregate all citations.
-        The frontend will use Google Maps to geocode and display these addresses.
+        The frontend will use Nominatim (OpenStreetMap) to geocode and display these addresses.
         This works for ALL citations, not just those with coordinates.
         
         Creates two files:

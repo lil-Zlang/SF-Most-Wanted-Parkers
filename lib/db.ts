@@ -79,7 +79,7 @@ export async function fetchCitationHotspots(limit = 20) {
 // Fetch all hotspots for heatmap (more data)
 export async function fetchAllHotspots(limit = 1000) {
   const { rows } = await sql`
-    SELECT location, citation_count, total_fines, top_violation, violation_breakdown
+    SELECT location, citation_count, total_fines, top_violation, violation_breakdown, latitude, longitude
     FROM citation_hotspots
     ORDER BY citation_count DESC
     LIMIT ${limit};

@@ -65,7 +65,7 @@ This imports data from `public/data/leaderboard.json` and individual plate files
   - **Page Layer** (`app/plate/[plateNumber]/page.tsx`): Additional safety filters ensure no pre-2025 data is displayed
   - **Fallback JSON**: When database is unavailable, JSON files are filtered using the same date logic
 
-**Client-Side Maps**: The Leaflet map components (`TicketMap`, `CitationHeatMap`) are dynamically imported with `ssr: false` because Leaflet requires browser APIs. Any new map features must use this pattern.
+**Client-Side Maps**: All map components (`TicketMap`, `MapView`, `AllCitationsMap`, `CitationHeatMap`) use Leaflet + React-Leaflet with OpenStreetMap tiles (100% free!). Maps are dynamically imported with `ssr: false` because Leaflet requires browser APIs. Geocoding is handled by Nominatim (OpenStreetMap's free geocoding service, no API key required). Any new map features must use this pattern.
 
 **Database Utilities**: The `lib/db.ts` module provides typed database query functions using `@vercel/postgres`. All database queries should go through this module to maintain consistency.
 

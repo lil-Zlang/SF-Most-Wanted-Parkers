@@ -1,10 +1,23 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import dynamic from 'next/dynamic';
 import SearchBar from '@/components/SearchBar';
 import LeaderboardTable from '@/components/LeaderboardTable';
-import AllCitationsMap from '@/components/AllCitationsMap';
 import { LeaderboardEntry } from '@/types';
 import { fetchLeaderboard } from '@/lib/db';
+
+// Dynamically import map component (requires browser APIs)
+const CitationHotspotsMap = dynamic(() => import('@/components/CitationHotspotsMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[600px] bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Loading map...</p>
+      </div>
+    </div>
+  )
+});
 
 /**
  * Main page - Displays the leaderboard of worst parking offenders
@@ -53,9 +66,9 @@ export default async function Home() {
         {/* Search Bar */}
         <SearchBar />
 
-        {/* Filtered Citations Map */}
+        {/* Citation Hotspots Map */}
         <div className="mb-12">
-          <AllCitationsMap />
+          <CitationHotspotsMap />
         </div>
 
         {/* Leaderboard */}
