@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Citation } from '@/types';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -37,22 +38,22 @@ interface FilterState {
 /**
  * Component to fit map bounds to markers
  */
-function FitBounds({ hotspots }: { hotspots: Hotspot[] }) {
+function FitBounds({ citations }: { citations: Citation[] }) {
   const map = useMap();
 
   useEffect(() => {
-    const validHotspots = hotspots.filter(
-      h => h.latitude !== undefined && h.longitude !== undefined &&
-      !isNaN(h.latitude) && !isNaN(h.longitude)
+    const validCitations = citations.filter(
+      c => c.latitude !== undefined && c.longitude !== undefined &&
+      !isNaN(c.latitude) && !isNaN(c.longitude)
     );
 
-    if (validHotspots.length > 0) {
+    if (validCitations.length > 0) {
       const bounds = L.latLngBounds(
-        validHotspots.map(h => [h.latitude!, h.longitude!] as [number, number])
+        validCitations.map(c => [c.latitude!, c.longitude!] as [number, number])
       );
       map.fitBounds(bounds, { padding: [50, 50] });
     }
-  }, [hotspots, map]);
+  }, [citations, map]);
 
   return null;
 }
@@ -161,6 +162,12 @@ export default function AllCitationsMap() {
 
     for (let i = 0; i < sample.length; i++) {
       const citation = sample[i];
+
+      // Skip citations without a location
+      if (!citation.location) {
+        continue;
+      }
+
       try {
         // Check cache first
         const cacheKey = citation.location;
@@ -496,8 +503,9 @@ export default function AllCitationsMap() {
             <FitBounds citations={validCitations} />
 
             {validCitations.map((citation, index) => {
-              const color = getMarkerColor(citation.fine_amount);
-              const size = getMarkerSize(citation.fine_amount);
+              const fineAmount = citation.fine_amount ?? 0;
+              const color = getMarkerColor(fineAmount);
+              const size = getMarkerSize(fineAmount);
 
               return (
                 <CircleMarker
@@ -521,13 +529,13 @@ export default function AllCitationsMap() {
                           <strong>Violation:</strong> {citation.violation}
                         </div>
                         <div style={{ marginBottom: '6px' }}>
-                          <strong>Fine:</strong> <span style={{ color: '#dc2626', fontWeight: 'bold' }}>${citation.fine_amount.toFixed(2)}</span>
+                          <strong>Fine:</strong> <span style={{ color: '#dc2626', fontWeight: 'bold' }}>${fineAmount.toFixed(2)}</span>
                         </div>
                         <div style={{ marginBottom: '6px' }}>
                           <strong>Citation #:</strong> {citation.citation_number}
                         </div>
                         <div>
-                          <strong>Date:</strong> {new Date(citation.date).toLocaleDateString()}
+                          <strong>Date:</strong> {citation.date ? new Date(citation.date).toLocaleDateString() : 'N/A'}
                         </div>
                       </div>
                     </div>
